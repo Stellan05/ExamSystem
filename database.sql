@@ -4,7 +4,6 @@ CREATE TABLE `user` (
     password VARCHAR(200) NOT NULL COMMENT '密码（加密存储）',
     real_name VARCHAR(50) COMMENT '真实姓名',
     role TINYINT NOT NULL COMMENT '角色: 1学生 2教师 3管理员',
-    status TINYINT DEFAULT 1 COMMENT '账号状态: 1启用 0禁用',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     is_deleted TINYINT DEFAULT 0 COMMENT '逻辑删除:0正常 1删除'
@@ -32,7 +31,7 @@ CREATE TABLE exam (
     start_time DATETIME NOT NULL,
     end_time DATETIME NOT NULL,
     limit_minutes INT NOT NULL COMMENT '限时（分钟）',
-    status TINYINT DEFAULT 0 COMMENT '0未发布 1发布 2进行中 3已结束',
+    status TINYINT DEFAULT 0 COMMENT '0 未开始 1 进行中 2 已结束',
     create_time DATETIME DEFAULT CURRENT_TIMESTAMP,
     update_time DATETIME DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     is_deleted TINYINT DEFAULT 0,
@@ -82,3 +81,4 @@ CREATE TABLE student_answer (
     INDEX idx_exam(student_exam_id),
     INDEX idx_question(question_id)
 ) COMMENT='答案明细表';
+
