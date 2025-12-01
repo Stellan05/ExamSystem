@@ -2,6 +2,8 @@ package org.example.examsystem.entity;
 import com.baomidou.mybatisplus.annotation.*;
 
 import lombok.Data;
+
+import java.time.LocalDateTime;
 import java.util.Date;
 
 /**
@@ -20,9 +22,9 @@ public class TesterExam {
     // 关联参加测试的学生ID
     private Long studentId;
 
-    private Date startTime;
+    private LocalDateTime startTime;
 
-    private Date submitTime;
+    private LocalDateTime submitTime;
 
     /**
      * 持续时间（分钟）
@@ -36,10 +38,10 @@ public class TesterExam {
     private Integer status;
 
     @TableField(fill = FieldFill.INSERT)
-    private Date createTime;
+    private LocalDateTime createTime;
 
     @TableField(fill = FieldFill.INSERT_UPDATE)
-    private Date updateTime;
+    private LocalDateTime updateTime;
 
     @TableLogic
     private Integer isDeleted;
