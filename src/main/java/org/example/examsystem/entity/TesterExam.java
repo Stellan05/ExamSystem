@@ -5,11 +5,11 @@ import lombok.Data;
 import java.util.Date;
 
 /**
- *  答卷表
+ *  本场考试详细信息
  */
 @Data
 @TableName("student_exam")
-public class StudentExam {
+public class TesterExam {
 
     @TableId(type = IdType.AUTO)
     private Long id;
@@ -24,8 +24,12 @@ public class StudentExam {
 
     private Date submitTime;
 
+    /**
+     * 持续时间（分钟）
+     */
     private Integer duration;
 
+    
     private Integer totalScore;
 
     // 答卷状态 0未开始 1作答中 2已提交

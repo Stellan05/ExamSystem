@@ -23,9 +23,6 @@ public class Question {
     // 题干
     private String content;
 
-    // 选项
-    private String optionsJson;
-
     // 标准答案
     private String answer;
 

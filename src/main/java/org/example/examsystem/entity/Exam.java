@@ -16,6 +16,11 @@ public class Exam {
     private String examName;
 
     /**
+     * 考试码
+     */
+    private Integer examCode;
+
+    /**
      *  创建者ID--关联教师ID
      */
     private Long creatorId;

@@ -8,8 +8,8 @@ import java.util.Date;
  * 学生答案表
  */
 @Data
-@TableName("student_answer")
-public class StudentAnswer {
+@TableName("answer_record")
+public class AnswerRecord {
 
     @TableId(type = IdType.AUTO)
     private Long id;

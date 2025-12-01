@@ -13,13 +13,13 @@ public class User {
     @TableId(type = IdType.AUTO)
     private Long id;
 
-    private String username;
+    private String email;
 
     private String password;
 
     private String realName;
 
-    // 用户类型 1 学生 2 教师 3 管理员
+    // 用户类型 1 参与者  2 出题人
     private Integer role;
 
     @TableField(fill = FieldFill.INSERT)
