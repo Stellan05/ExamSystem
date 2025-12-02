@@ -10,7 +10,7 @@ import java.util.Date;
  *  本场考试详细信息
  */
 @Data
-@TableName("student_exam")
+@TableName("tester_exam")
 public class TesterExam {
 
     @TableId(type = IdType.AUTO)
