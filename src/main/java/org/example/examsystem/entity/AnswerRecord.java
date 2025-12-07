@@ -30,6 +30,9 @@ public class AnswerRecord {
     // 主观题教师评分
     private Integer teacherScore;
 
+    // 是否已批阅 （0：未批 1：已批）
+    private Integer isReviewed;
+
     private Integer finalScore;
 
     @TableField(fill = FieldFill.INSERT)
