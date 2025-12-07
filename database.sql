@@ -7,6 +7,7 @@ CREATE TABLE `answer_record` (
     `final_score` double DEFAULT '0' COMMENT '最终得分',
     `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
     `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
+    `is_reviewed` tinyint DEFAULT '0' COMMENT '是否已批阅（0：未批 1：已批）',
     `student_answer` text COMMENT '考生答案',
     `is_deleted` tinyint DEFAULT '0',
     PRIMARY KEY (`id`),
@@ -106,3 +107,4 @@ CREATE TABLE `user` (
     `role` int DEFAULT NULL COMMENT '用户身份 1：参与者 2：出题人',
     PRIMARY KEY (`id`)
 ) ENGINE = InnoDB AUTO_INCREMENT = 3 DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户表'
+
