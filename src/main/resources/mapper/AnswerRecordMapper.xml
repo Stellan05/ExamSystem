@@ -1,0 +1,67 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.examsystem.mapper.AnswerRecordMapper">
+
+    <!-- 查询考试题目详细信息（含选项、正确答案、用户答案、得分） -->
+    <select id="getQuestionDetails" resultMap="questionDetailResultMap" parameterType="map">
+        SELECT
+            q.id AS questionId,
+            q.content AS content,
+            q.question_type AS type,
+            eq.score AS score,
+            qa.correct_answer AS correctAnswer,
+            ar.student_answer AS userAnswer,
+            ar.final_score AS userScore,
+            te.id AS studentExamId
+        FROM exam_question eq
+                 JOIN question q ON eq.question_id = q.id
+                 LEFT JOIN question_answer qa ON qa.question_id = q.id
+            -- 先找到该学生针对该场考试的记录 (tester_exam)
+                 LEFT JOIN tester_exam te
+                           ON te.exam_id = eq.exam_id
+                               AND te.student_id = #{userId}
+                               AND te.is_deleted = 0
+            -- 再通过 tester_exam 的主键 ID 找到答题记录
+                 LEFT JOIN answer_record ar
+                           ON ar.student_exam_id = te.id  AND ar.question_id = q.id
+                               AND ar.is_deleted = 0
+        WHERE eq.exam_id = #{examId}
+          AND eq.is_deleted = 0
+          AND q.is_deleted = 0
+        ORDER BY eq.sort ASC
+    </select>
+
+    <resultMap id="questionDetailResultMap" type="org.example.examsystem.vo.QuestionDetailVO">
+
+        <!-- 顶层简单属性 -->
+        <result property="correctAnswer" column="correctAnswer"/>
+        <result property="userAnswer" column="userAnswer"/>
+        <result property="userScore" column="userScore"/>
+
+        <!-- 嵌套对象 -->
+        <association property="questionSimpleInfoVO" javaType="org.example.examsystem.vo.QuestionSimpleInfoVO">
+            <id property="questionId" column="questionId"/>
+            <result property="content" column="content"/>
+            <result property="type" column="type"/>
+            <result property="score" column="score"/>
+
+            <!-- 嵌套集合：选项 -->
+            <collection property="options" ofType="org.example.examsystem.vo.OptionVO"
+                        select="getOptionsByQuestionIdForChoice" column="questionId"/>
+        </association>
+
+    </resultMap>
+
+
+    <!-- 查询题目选项 -->
+    <select id="getOptionsByQuestionIdForChoice" resultType="org.example.examsystem.vo.OptionVO" parameterType="long">
+        SELECT option_key AS optionKey, option_text AS optionText
+        FROM question_option
+        WHERE question_id = #{questionId}
+        ORDER BY id ASC
+    </select>
+
+</mapper>
+

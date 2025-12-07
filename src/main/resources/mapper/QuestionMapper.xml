@@ -1,0 +1,39 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.examsystem.mapper.QuestionMapper">
+    <select id="getQuestions" resultMap="questionResultMap">
+        SELECT
+            q.id AS questionId,
+            q.content AS content,
+            q.question_type AS type,
+            eq.score AS score
+        FROM exam_question eq
+                 JOIN question q ON eq.question_id = q.id
+        WHERE eq.exam_id = #{examId}
+          AND eq.is_deleted = 0
+          AND q.is_deleted = 0
+        ORDER BY eq.sort ASC
+    </select>
+
+    <resultMap id="questionResultMap" type="org.example.examsystem.vo.QuestionSimpleInfoVO">
+        <id property="questionId" column="questionId"/>
+        <result property="content" column="content"/>
+        <result property="type" column="type"/>
+        <result property="score" column="score"/>
+        <collection property="options" ofType="org.example.examsystem.vo.OptionVO"
+                    select="getOptionsByQuestionIdForChoice" column="questionId"/>
+    </resultMap>
+
+
+    <!-- 只查单选/多选题选项 -->
+    <select id="getOptionsByQuestionIdForChoice" resultType="org.example.examsystem.vo.OptionVO" parameterType="long">
+        SELECT  option_key AS optionKey, option_text AS optionText
+        FROM question_option
+        WHERE question_id = #{questionId}
+    </select>
+
+
+
+</mapper>

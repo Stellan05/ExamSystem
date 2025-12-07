@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.examsystem.mapper.WrongQuestionMapper">
+    <select id="getWrongQuestionsByType" resultType="org.example.examsystem.vo.WrongQuestionVO">
+        SELECT
+            -- 错题表字段
+            wt.id AS wrongQuestionId,
+            wt.student_id AS studentId,
+            wt.question_id AS questionId,
+            wt.wrong_count AS count,
+            wt.student_answer AS studentAnswer,
+            wt.correct_answer AS correctAnswer,
+            wt.note AS note,
+            wt.create_time AS createTime,
+            wt.update_time AS updateTime,
+
+            -- 原题目字段
+            q.question_type AS questionType,
+            q.content AS content,
+            q.options_json AS optionsJson
+
+        FROM wrong_question wt
+        LEFT JOIN question q ON wt.question_id = q.id
+        WHERE q.question_type = #{type}
+    </select>
+
+</mapper>

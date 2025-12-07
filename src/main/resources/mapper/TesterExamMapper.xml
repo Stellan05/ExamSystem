@@ -1,0 +1,91 @@
+<?xml version="1.0" encoding="UTF-8" ?>
+<!DOCTYPE mapper PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+
+<mapper namespace="org.example.examsystem.mapper.TesterExamMapper">
+
+
+    <select id="getAllTestersByPage" resultType="org.example.examsystem.vo.UserSimpleInfoVO">
+        SELECT
+            te.student_id AS userId,
+            u.real_name AS realName
+        FROM tester_exam te
+                 JOIN user u ON te.student_id = u.id
+        WHERE te.exam_id = #{examId}
+          AND te.is_deleted = 0
+          AND u.is_deleted = 0
+        ORDER BY te.student_id
+    </select>
+
+<!--    考试参与者查询考试相关信息-->
+    <select id="getExamsByTesterId" resultType="org.example.examsystem.vo.TesterExamInfoVO">
+        SELECT te.id AS testerExamId,
+               te.exam_id,
+               te.status AS testerStatus,
+               te.total_score,
+               te.start_time AS testerStartTime,
+               te.submit_time AS testerSubmitTime,
+               e.exam_name,
+               e.start_time AS examStartTime,
+               e.end_time AS examEndTime,
+               e.limit_minutes,
+               e.status AS examStatus
+        FROM tester_exam te
+                 JOIN exam e ON te.exam_id = e.id
+        WHERE te.student_id = #{userId} AND te.is_deleted = 0 AND e.is_deleted = 0
+    </select>
+
+<!--    出题者查询考试相关信息-->
+    <select id="getExamsByCreatorId" resultType="org.example.examsystem.vo.CreatorExamInfoVO">
+        SELECT id AS examId,
+               exam_name,
+               description,
+               start_time ,
+               end_time ,
+               limit_minutes,
+               status ,
+               create_time,
+               update_time
+        FROM exam
+        WHERE creator_id = #{userId} AND is_deleted = 0
+    </select>
+
+    <resultMap id="RankInfoMap" type="org.example.examsystem.vo.RankInfoVO">
+        <result property="total" column="total"/>
+        <result property="rank" column="rank"/>
+    </resultMap>
+
+    <select id="getRank" resultMap="RankInfoMap">
+        SELECT
+            total_count AS total,
+            `rank`
+        FROM (
+                 SELECT
+                     student_id,
+                     total_score,
+                     DENSE_RANK() OVER (ORDER BY total_score DESC) AS `rank`,
+                     (SELECT COUNT(*)
+                      FROM tester_exam
+                      WHERE exam_id = #{examId} AND is_deleted = 0) AS total_count
+                 FROM tester_exam
+                 WHERE exam_id = #{examId}
+                   AND is_deleted = 0
+             ) ranked
+        WHERE student_id = #{studentId}
+    </select>
+
+    <select id="getGrades" resultType="org.example.examsystem.vo.GradeInfoVO">
+        SELECT
+            u.id AS userId,
+            u.real_name AS realName,
+            te.total_score AS score
+        FROM tester_exam te
+                 JOIN user u ON te.student_id = u.id
+        WHERE te.exam_id = #{examId}
+          AND te.is_deleted = 0
+          AND u.is_deleted = 0
+        ORDER BY te.total_score DESC
+    </select>
+
+
+</mapper>
