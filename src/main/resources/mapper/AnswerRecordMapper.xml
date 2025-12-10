@@ -63,5 +63,77 @@
         ORDER BY id ASC
     </select>
 
+
+    <select id="getTeacherReviewDetail"
+            resultType="org.example.examsystem.vo.TeacherReviewQuestionDetailVO">
+
+        SELECT
+            eq.exam_id          AS examId,
+            ar.question_id      AS questionId,
+            te.student_id       AS studentId,
+
+            q.question_type     AS questionType,
+            q.content           AS content,
+
+            qa.correct_answer   AS correctAnswer,
+
+            ar.student_answer   AS studentAnswer,
+            eq.score            AS score,
+            ar.teacher_score    AS teacherScore,
+            ar.is_reviewed      AS reviewed
+
+        FROM answer_record ar
+                 JOIN tester_exam te
+                      ON ar.student_exam_id = te.id
+                          AND te.exam_id = #{examId}
+                          AND te.student_id = #{studentId}
+                          AND te.is_deleted = 0
+
+                 JOIN exam_question eq
+                      ON eq.exam_id = #{examId}
+                          AND eq.question_id = #{questionId}
+                          AND eq.is_deleted = 0
+
+                 JOIN question q
+                      ON q.id = ar.question_id
+                          AND q.id = #{questionId}
+                          AND q.question_type = 5          -- 只允许主观题
+                          AND q.is_deleted = 0
+
+                 LEFT JOIN question_answer qa
+                           ON qa.question_id = q.id
+
+        WHERE ar.is_deleted = 0
+          AND ar.question_id = #{questionId}
+
+    </select>
+
+
+    <!-- 统计考试中主观题数量（去重） -->
+    <select id="countSubjectiveQuestions" resultType="java.lang.Integer">
+        SELECT COUNT(DISTINCT ar.question_id)
+        FROM answer_record ar
+                 JOIN question q ON ar.question_id = q.id AND q.question_type = 5
+                 JOIN tester_exam te ON ar.student_exam_id = te.id
+        WHERE te.exam_id = #{examId}
+          AND te.is_deleted = 0
+          AND ar.is_deleted = 0
+    </select>
+
+    <!-- 统计每个学生已批阅的主观题数量 -->
+    <select id="countReviewedPerStudent" resultType="org.example.examsystem.dto.StudentReviewCount">
+        SELECT
+            ar.student_exam_id AS studentExamId,
+            COUNT(*) AS reviewedCount
+        FROM answer_record ar
+                 JOIN question q ON ar.question_id = q.id AND q.question_type = 5
+                 JOIN tester_exam te ON ar.student_exam_id = te.id
+        WHERE te.exam_id = #{examId}
+          AND ar.is_reviewed = 1
+          AND ar.is_deleted = 0
+          AND te.is_deleted = 0
+        GROUP BY ar.student_exam_id
+    </select>
+
 </mapper>
 

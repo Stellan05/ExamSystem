@@ -1,5 +1,6 @@
 package org.example.examsystem.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import org.apache.ibatis.annotations.Param;
 import org.example.examsystem.entity.Exam;
@@ -9,9 +10,11 @@ import org.example.examsystem.mapper.TesterExamMapper;
 import org.example.examsystem.service.IService.IExamPaperService;
 import org.example.examsystem.service.IService.IExamService;
 import org.example.examsystem.service.IService.IGradeService;
+import org.example.examsystem.vo.ExamSimpleInfoVO;
 import org.example.examsystem.vo.QuestionDetailVO;
 import org.example.examsystem.vo.QuestionSimpleInfoVO;
 import org.example.examsystem.vo.Result;
+import org.springframework.beans.BeanUtils;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
@@ -40,9 +43,9 @@ public class ExamController {
      * @param size 页尺寸
      * @return 人员信息VO类
      */
-    @GetMapping("/testers")
+    @GetMapping("/{examId}/testers")
     public Result getAllTest(
-            @RequestParam long examId,
+            @PathVariable("examId") long examId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size){
         return Result.ok(examService.getAllTesters(examId,page,size));
@@ -83,26 +86,38 @@ public class ExamController {
      * 并获取题目
      * @return 题目链表
      */
-    @Transactional
-    @PostMapping("/join")
-    public Result joinExam(
-            @RequestBody Map<String,Object> map
+    @PostMapping("/check")
+    public Result checkExam(
+            @RequestParam String code
     ){
-        long userId = Long.parseLong(map.get("userId").toString());
-        long examId = Long.parseLong(map.get("examId").toString());
-        if(map.get("code").toString().length()!=6){
+        if(code.length()!=6){
             return Result.fail("考试码必须为6位");
         }
-        int code = Integer.parseInt(map.get("code").toString());
         // 查询考试
-        Exam exam = examMapper.selectById(examId);
+        LambdaQueryWrapper<Exam>  queryWrapper = new LambdaQueryWrapper<>();
+        queryWrapper.eq(Exam::getExamCode,code);
+        Exam exam =  examMapper.selectOne(queryWrapper);
         if(exam==null){
-            return Result.fail("未找到该考试！");
+            return Result.info(404,"未找到该考试！");
         }
-        // 验证考试码
-        if(code != exam.getExamCode()){
-            return Result.fail("考试码错误！");
-        }
+        ExamSimpleInfoVO examSimpleInfoVO = new ExamSimpleInfoVO();
+        BeanUtils.copyProperties(exam,examSimpleInfoVO);
+        examSimpleInfoVO.setExamId(exam.getId());
+        return Result.ok(examSimpleInfoVO);
+    }
+
+    /**
+     * 点击确认后开始考试
+     * @param examId 考试ID
+     * @param userId 用户ID
+     * @return 题目链表
+     */
+    @Transactional
+    @PostMapping("/{examId}/start")
+    public Result startExam(
+            @PathVariable("examId") Long examId,
+            @RequestParam("userId")  Long userId
+    ){
         // 加入考试后创建考试信息关联表
         TesterExam testerExam = new TesterExam();
         testerExam.setExamId(examId);
@@ -112,14 +127,13 @@ public class ExamController {
 
         int result = testerExamMapper.insert(testerExam);
         if(result==0){
-            return Result.fail("加入考试异常，请联系管理员");
+            return Result.fail("开始考试异常，请联系管理员");
         }
         // 获取考试题目信息
         List<QuestionSimpleInfoVO> questions = examService.getQuestions(examId);
 
         return Result.ok(questions);
     }
-
 
     /**
      * 返回考试排名情况

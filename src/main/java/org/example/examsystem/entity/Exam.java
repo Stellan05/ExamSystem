@@ -28,9 +28,9 @@ public class Exam {
 
     private String description;
 
-    private Date startTime;
+    private LocalDateTime startTime;
 
-    private Date endTime;
+    private LocalDateTime endTime;
 
     private Integer limitMinutes;
 

@@ -26,4 +26,5 @@ public class Result {
     public static Result fail(String errorMsg){
         return new Result(500, errorMsg, null);
     }
+    public static Result info(Integer code,String message){return new Result(code,message,null);}
 }
