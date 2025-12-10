@@ -19,7 +19,7 @@ public class Exam {
     /**
      * 考试码
      */
-    private Integer examCode;
+    private String examCode;
 
     /**
      *  创建者ID--关联教师ID
