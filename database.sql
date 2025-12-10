@@ -27,10 +27,10 @@ CREATE TABLE `exam` (
     `create_time` datetime DEFAULT CURRENT_TIMESTAMP,
     `update_time` datetime DEFAULT CURRENT_TIMESTAMP ON UPDATE CURRENT_TIMESTAMP,
     `is_deleted` tinyint DEFAULT '0',
-    `exam_code` int NOT NULL COMMENT '考试码，系统随机生成六位，考生通过输入考试码加入考试',
+    `exam_code` varchar(10) NOT NULL COMMENT '考试码，系统随机生成六位，考生通过输入考试码加入考试',
     PRIMARY KEY (`id`),
     KEY `idx_creator` (`creator_id`)
-) ENGINE = InnoDB AUTO_INCREMENT = 2 DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '考试表'
+) ENGINE = InnoDB DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '考试表'
 
 CREATE TABLE `exam_question` (
     `id` bigint NOT NULL AUTO_INCREMENT,
@@ -107,4 +107,5 @@ CREATE TABLE `user` (
     `role` int DEFAULT NULL COMMENT '用户身份 1：参与者 2：出题人',
     PRIMARY KEY (`id`)
 ) ENGINE = InnoDB AUTO_INCREMENT = 3 DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '用户表'
+
 
