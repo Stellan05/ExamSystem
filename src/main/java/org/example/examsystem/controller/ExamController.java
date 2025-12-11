@@ -2,18 +2,17 @@ package org.example.examsystem.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
+import lombok.val;
 import org.apache.ibatis.annotations.Param;
 import org.example.examsystem.entity.Exam;
 import org.example.examsystem.entity.TesterExam;
+import org.example.examsystem.mapper.AnswerRecordMapper;
 import org.example.examsystem.mapper.ExamMapper;
 import org.example.examsystem.mapper.TesterExamMapper;
 import org.example.examsystem.service.IService.IExamPaperService;
 import org.example.examsystem.service.IService.IExamService;
 import org.example.examsystem.service.IService.IGradeService;
-import org.example.examsystem.vo.ExamSimpleInfoVO;
-import org.example.examsystem.vo.QuestionDetailVO;
-import org.example.examsystem.vo.QuestionSimpleInfoVO;
-import org.example.examsystem.vo.Result;
+import org.example.examsystem.vo.*;
 import org.springframework.beans.BeanUtils;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
@@ -32,9 +31,9 @@ public class ExamController {
 
     private final IExamService examService;
     private final ExamMapper examMapper;
-    private final TesterExamMapper testerExamMapper;
-    private final IExamPaperService examPaperService;
+    private final AnswerRecordMapper answerRecordMapper;
     private final IGradeService gradeService;
+    private final TesterExamMapper testerExamMapper;
 
     /**
      * 分页查询参加本场考试人员信息
@@ -53,20 +52,29 @@ public class ExamController {
 
     /**
      * 用户获取考试信息
-     * 测试者获取参加过的考试
-     * 出题者获取发布过的试题
+     * 考生获取参加过的考试
      * @return exam记录分页
      */
-    @PostMapping("/my-exam")
-    public Result getMyExams(
-            @RequestBody Map<String,Object> map,
+    @PostMapping("/my-exam/tester")
+    public Result getTesterExams(
+            @RequestParam("userId") long userId,
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ){
-        long userId = Long.parseLong(map.get("userId").toString());
-        int role= Integer.parseInt(map.get("role").toString());
-        if(examService.getMyExams(userId,role,page,size)!=null){
-            return Result.ok(examService.getMyExams(userId,role,page,size));
+        if(examService.getTesterExams(userId,page,size)!=null){
+            return Result.ok(examService.getTesterExams(userId,page,size));
+        }else{
+            return Result.fail("错误参数");
+        }
+    }
+
+    @PostMapping("/my-exam/creator")
+    public Result getCreatorExam(@RequestParam("userId") long userId,
+                                 @RequestParam(defaultValue = "1") int page,
+                                 @RequestParam(defaultValue = "10") int size){
+        val result = examService.getCreatorExams(userId, page, size);
+        if(result!=null){
+            return Result.ok(result);
         }else{
             return Result.fail("错误参数");
         }
@@ -77,7 +85,7 @@ public class ExamController {
             @PathVariable("examId") Long examId,
             @RequestParam Long userId
     ){
-        List<QuestionDetailVO> list = examPaperService.getQuestionDetail(examId,userId);
+        List<QuestionDetailVO> list = answerRecordMapper.getQuestionDetails(examId,userId);
         return Result.ok(list);
     }
 

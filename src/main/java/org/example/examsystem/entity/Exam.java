@@ -39,6 +39,11 @@ public class Exam {
      */
     private Integer status;
 
+    /**
+     * 考试结束考生能否查看试卷： 0无法查看  1可以查看
+     */
+    private Boolean paperShow;
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 

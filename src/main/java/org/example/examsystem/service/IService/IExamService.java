@@ -19,7 +19,9 @@ public interface IExamService extends IService<Exam>{
 
     RankInfoVO getMyRank(Long examId, Long userId);
 
-    Page<?> getMyExams(Long userId,Integer userRole,Integer page, Integer pageSize);
+    Page<?> getCreatorExams(Long userId,Integer page, Integer pageSize);
+
+    Page<?> getTesterExams(Long userId,Integer page, Integer pageSize);
 
     Page<UserSimpleInfoVO> getAllTesters(Long userId, Integer page, Integer pageSize);
 

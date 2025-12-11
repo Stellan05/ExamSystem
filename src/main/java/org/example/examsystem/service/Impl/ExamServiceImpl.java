@@ -6,10 +6,7 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.example.examsystem.entity.Exam;
 import org.example.examsystem.entity.TesterExam;
-import org.example.examsystem.mapper.ExamMapper;
-import org.example.examsystem.mapper.QuestionMapper;
-import org.example.examsystem.mapper.TesterExamMapper;
-import org.example.examsystem.mapper.UserMapper;
+import org.example.examsystem.mapper.*;
 import org.example.examsystem.service.IService.IExamService;
 import org.example.examsystem.vo.*;
 import org.springframework.stereotype.Service;
@@ -22,29 +19,35 @@ public class ExamServiceImpl extends ServiceImpl<ExamMapper,Exam> implements IEx
 
     private final ExamMapper examMapper;
     private final TesterExamMapper testerExamMapper;
-    private final UserMapper userMapper;
+    private final AnswerRecordMapper answerRecordMapper;
     private final QuestionMapper questionMapper;
 
     /**
-     * 用户获取自己 参加过/发布过 的考试
+     * 用户获取自己 参加过的考试
      * @param userId 用户Id
      * @return 考试列表
      */
     @Override
-    public Page<?> getMyExams(Long userId,Integer role, Integer page, Integer pageSize) {
+    public Page<?> getTesterExams(Long userId, Integer page, Integer pageSize) {
         // 参与者查询
-        if(role==1){
             Page<TesterExamInfoVO> examPage = new Page<>(page,pageSize);
             return testerExamMapper.getExamsByTesterId(examPage,userId);
+    }
+
+    /**
+     * 用户获取自己 发布过的考试
+     * @param userId 用户Id
+     * @return 考试列表
+     */
+    @Override
+    public Page<?> getCreatorExams(Long userId, Integer page, Integer pageSize) {
+        Page<CreatorExamInfoVO> pages = testerExamMapper.getExamsByCreatorId(
+                new Page<>(page, pageSize), userId);
+        for(CreatorExamInfoVO vo : pages.getRecords()){
+            List<QuestionDetailVO> questionDetailVOS = answerRecordMapper.getQuestionDetails(vo.getExamId(),userId);
+            vo.setQuestionDetailVOList(questionDetailVOS);
         }
-        // 出题者查询
-        else if(role==2){
-            Page<CreatorExamInfoVO>  creatorPage = new Page<>(page,pageSize);
-            return testerExamMapper.getExamsByCreatorId(creatorPage,userId);
-        }
-        else {
-            return null;
-        }
+        return pages;
     }
 
     /**
@@ -74,15 +77,15 @@ public class ExamServiceImpl extends ServiceImpl<ExamMapper,Exam> implements IEx
 
     /**
      * 获取参与本场考试的所有参与者
-     * @param userId 用户ID
+     * @param examId 用户ID
      * @param page 当前页
      * @param pageSize 页尺寸
      * @return 参与者链表
      */
     @Override
-    public Page<UserSimpleInfoVO> getAllTesters(Long userId, Integer page, Integer pageSize) {
+    public Page<UserSimpleInfoVO> getAllTesters(Long examId, Integer page, Integer pageSize) {
         Page<UserSimpleInfoVO> pageVO = new Page<>(page, pageSize);
-        return testerExamMapper.getAllTestersByPage(pageVO,userId);
+        return testerExamMapper.getAllTestersByPage(pageVO,examId);
     }
 
     /**

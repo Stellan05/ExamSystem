@@ -1,0 +1,19 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.examsystem.mapper.ExamQuestionMapper">
+    <select id="getSubjectiveQuestionIds" resultType="java.lang.Long">
+        SELECT eq.question_id
+        FROM exam_question eq
+                 JOIN question q ON q.id = eq.question_id
+        WHERE eq.exam_id = #{examId}
+          AND eq.is_deleted = 0
+          AND q.is_deleted = 0
+          AND q.question_type = 5   -- 主观题
+        ORDER BY eq.sort ASC
+    </select>
+
+
+
+</mapper>

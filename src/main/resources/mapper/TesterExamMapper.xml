@@ -45,7 +45,8 @@
                limit_minutes,
                status ,
                create_time,
-               update_time
+               update_time,
+               paper_show AS showAnswer
         FROM exam
         WHERE creator_id = #{userId} AND is_deleted = 0
     </select>
