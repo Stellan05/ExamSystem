@@ -6,9 +6,14 @@ import org.example.examsystem.entity.User;
 import org.example.examsystem.mapper.UserMapper;
 import org.example.examsystem.service.IService.EmployeeService;
 import org.example.examsystem.utils.JwtUtils;
+import org.example.examsystem.utils.MailService;
+import org.example.examsystem.utils.VerificationCodeService;
 import org.example.examsystem.vo.EmployeeLoginVO;
+import org.example.examsystem.vo.RegisterResponseVO;
 import org.example.examsystem.vo.Result;
+import org.example.examsystem.vo.SendCodeResponseVO;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.HashMap;
 import java.util.Map;
@@ -18,6 +23,8 @@ import java.util.Map;
 public class EmployeeServiceImpl implements EmployeeService {
 
     private final UserMapper userMapper;
+    private final MailService mailService;
+    private final VerificationCodeService verificationCodeService;
 
     @Override
     public Result login(String username, String password) {
@@ -44,6 +51,124 @@ public class EmployeeServiceImpl implements EmployeeService {
         vo.setToken(token);
 
         return Result.ok(vo);
+    }
+
+    @Override
+    public Result register(String email, String password, String realName, Integer role, String verificationCode) {
+        if (!StringUtils.hasText(email) || !StringUtils.hasText(password)) {
+            return Result.fail("邮箱或密码不能为空");
+        }
+        if (!StringUtils.hasText(verificationCode)) {
+            return Result.fail("验证码不能为空");
+        }
+        if (!verificationCodeService.validate(email, verificationCode)) {
+            return Result.info(400, "验证码错误或已过期");
+        }
+
+        // 邮箱唯一性校验
+        Long exists = userMapper.selectCount(
+                Wrappers.<User>lambdaQuery()
+                        .eq(User::getEmail, email)
+                        .eq(User::getIsDeleted, 0)
+        );
+        if (exists != null && exists > 0) {
+            return Result.info(409, "该邮箱已注册");
+        }
+        User user = new User();
+        user.setEmail(email);
+        user.setPassword(password);
+        // 如果 realName 为空或 null，使用 email 作为默认值
+        if (StringUtils.hasText(realName)) {
+            user.setRealName(realName);
+            System.out.println("设置 realName: " + realName);
+        } else {
+            user.setRealName(email);
+            System.out.println("realName 为空，使用 email 作为默认值: " + email);
+        }
+        user.setRole(role == null ? 1 : role);
+        int rows = userMapper.insert(user);
+        if (rows == 0) {
+            return Result.fail("注册失败，请稍后再试");
+        }
+        
+        // 返回注册结果VO
+        RegisterResponseVO responseVO = new RegisterResponseVO();
+        responseVO.setUserId(user.getId());
+        responseVO.setEmail(user.getEmail());
+        responseVO.setRealName(user.getRealName());
+        responseVO.setRole(user.getRole());
+        return Result.ok(responseVO);
+    }
+
+    @Override
+    public Result sendRegisterCode(String email) {
+        if (!StringUtils.hasText(email)) {
+            return Result.fail("邮箱不能为空");
+        }
+        // 已存在则提示
+        Long exists = userMapper.selectCount(
+                Wrappers.<User>lambdaQuery()
+                        .eq(User::getEmail, email)
+                        .eq(User::getIsDeleted, 0)
+        );
+        if (exists != null && exists > 0) {
+            return Result.info(409, "该邮箱已注册");
+        }
+        String code = verificationCodeService.generate(email);
+        mailService.sendSimpleMail(mailServiceFrom(), email, "考试系统注册验证码", "您的验证码为：" + code + "，5分钟内有效。");
+        
+        // 返回发送验证码结果VO
+        SendCodeResponseVO responseVO = new SendCodeResponseVO();
+        responseVO.setMessage("验证码已发送到您的邮箱，请查收");
+        return Result.ok(responseVO);
+    }
+
+    @Override
+    public Result logout(String token) {
+        // 系统未持久化会话状态，客户端丢弃 token 即可；这里尝试解析以便给出更友好的反馈
+        if (StringUtils.hasText(token)) {
+            try {
+                JwtUtils.parseJWT(token);
+            } catch (Exception ex) {
+                return Result.info(401, "token无效或已过期");
+            }
+        }
+        return Result.info(200, "退出成功");
+    }
+
+    @Override
+    public Result editPassword(Long empId, String oldPassword, String newPassword) {
+        if (empId == null) {
+            return Result.fail("用户ID不能为空");
+        }
+        if (!StringUtils.hasText(oldPassword) || !StringUtils.hasText(newPassword)) {
+            return Result.fail("旧密码和新密码均不能为空");
+        }
+        if (oldPassword.equals(newPassword)) {
+            return Result.info(400, "新密码不能与旧密码相同");
+        }
+
+        int rows = userMapper.update(
+                null,
+                Wrappers.<User>lambdaUpdate()
+                        .eq(User::getId, empId)
+                        .eq(User::getIsDeleted, 0)
+                        .eq(User::getPassword, oldPassword)
+                        .set(User::getPassword, newPassword)
+        );
+        if (rows == 0) {
+            return Result.info(400, "旧密码错误或用户不存在");
+        }
+        return Result.info(200, "密码修改成功");
+    }
+
+    /**
+     * 获取发件人邮箱
+     */
+    private String mailServiceFrom() {
+        // 使用 spring.mail.username 作为发件人
+        // 这里直接读取系统属性或环境变量也可，根据项目需求调整
+        return "2863848911@qq.com";
     }
 }
 
