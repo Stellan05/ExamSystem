@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 
 @Data
 @TableName("exam")
@@ -19,7 +18,10 @@ public class Exam {
     /**
      * 考试码
      */
-    private String examCode;
+    /**
+     * 考试码（六位数字）
+     */
+    private Integer examCode;
 
     /**
      *  创建者ID--关联教师ID

@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 
 /**
  * 题库及其答案
@@ -24,11 +23,6 @@ public class Question {
 
     // 题干
     private String content;
-
-    // 标准答案
-    private String answer;
-
-    private Integer score;
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;

@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.examsystem.mapper.ExamMapper">
+
+    <!-- 查询用户最近创建的、未开始的考试（用于自动关联题目） -->
+    <select id="getRecentUnstartedExamId" resultType="java.lang.Long">
+        SELECT id
+        FROM exam
+        WHERE creator_id = #{creatorId}
+          AND status = 0
+          AND is_deleted = 0
+        ORDER BY create_time DESC
+        LIMIT 1
+    </select>
+
+    <!-- 查询用户最近创建的考试（不限状态，用于自动关联题目兜底） -->
+    <select id="getRecentExamId" resultType="java.lang.Long">
+        SELECT id
+        FROM exam
+        WHERE creator_id = #{creatorId}
+          AND is_deleted = 0
+        ORDER BY create_time DESC
+        LIMIT 1
+    </select>
+
+</mapper>
+
+

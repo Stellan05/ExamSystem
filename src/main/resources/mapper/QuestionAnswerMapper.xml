@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.examsystem.mapper.QuestionAnswerMapper">
+
+    <select id="selectByQuestionId" resultType="org.example.examsystem.entity.QuestionAnswer">
+        SELECT
+            id,
+            question_id AS questionId,
+            correct_answer AS correctAnswer,
+            answer_analysis AS answerAnalysis,
+            create_time AS createTime,
+            update_time AS updateTime
+        FROM question_answer
+        WHERE question_id = #{questionId}
+        LIMIT 1
+    </select>
+
+</mapper>
+
+

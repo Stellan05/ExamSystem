@@ -14,6 +14,24 @@
         ORDER BY eq.sort ASC
     </select>
 
+    <!-- 根据考试ID和题目ID查询关联记录（未删除） -->
+    <select id="selectByExamIdAndQuestionId" resultType="org.example.examsystem.entity.ExamQuestion">
+        SELECT
+            id,
+            exam_id AS examId,
+            question_id AS questionId,
+            score,
+            sort,
+            create_time AS createTime,
+            update_time AS updateTime,
+            is_deleted AS isDeleted
+        FROM exam_question
+        WHERE exam_id = #{examId}
+          AND question_id = #{questionId}
+          AND (is_deleted = 0 OR is_deleted IS NULL)
+        LIMIT 1
+    </select>
+
 
 
 </mapper>

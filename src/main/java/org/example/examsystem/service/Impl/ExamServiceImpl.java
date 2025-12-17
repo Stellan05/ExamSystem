@@ -6,12 +6,19 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.example.examsystem.entity.Exam;
 import org.example.examsystem.entity.TesterExam;
+import org.example.examsystem.dto.CreateExamRequest;
 import org.example.examsystem.mapper.*;
 import org.example.examsystem.service.IService.IExamService;
 import org.example.examsystem.vo.*;
 import org.springframework.stereotype.Service;
+import org.springframework.util.StringUtils;
 
 import java.util.List;
+import java.util.HashMap;
+import java.util.Map;
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+import java.time.LocalTime;
 
 @Service
 @RequiredArgsConstructor
@@ -96,5 +103,65 @@ public class ExamServiceImpl extends ServiceImpl<ExamMapper,Exam> implements IEx
     @Override
     public List<QuestionSimpleInfoVO> getQuestions(Long examId) {
         return questionMapper.getQuestions(examId);
+    }
+
+    /**
+     * 创建考试并绑定题目
+     */
+    @Override
+    public Result createExam(CreateExamRequest request) {
+        if (!StringUtils.hasText(request.getExamName())) {
+            return Result.fail("考试名称不能为空");
+        }
+        if (!StringUtils.hasText(request.getExamCode())) {
+            return Result.fail("考试码不能为空");
+        }
+        if (request.getCreatorId() == null) {
+            return Result.fail("创建者ID不能为空");
+        }
+        if (request.getDuration() == null || request.getDuration() <= 0) {
+            return Result.fail("考试时长必须大于0");
+        }
+        Integer examCodeInt;
+        try {
+            examCodeInt = Integer.valueOf(request.getExamCode());
+        } catch (NumberFormatException ex) {
+            return Result.fail("考试码必须为六位数字");
+        }
+        if (request.getExamCode().length() != 6) {
+            return Result.fail("考试码必须为六位数字");
+        }
+
+        LocalDateTime start;
+        try {
+            start = LocalDateTime.of(LocalDate.parse(request.getStartDate()), LocalTime.parse(request.getStartTime()));
+        } catch (Exception ex) {
+            return Result.fail("开始时间格式错误，应为 yyyy-MM-dd 与 HH:mm:ss");
+        }
+
+        // 唯一性：考试码不能重复
+        Long exists = examMapper.selectCount(Wrappers.<Exam>lambdaQuery()
+                .eq(Exam::getExamCode, examCodeInt)
+                .eq(Exam::getIsDeleted, 0));
+        if (exists != null && exists > 0) {
+            return Result.info(409, "考试码已存在");
+        }
+
+        Exam exam = new Exam();
+        exam.setExamName(request.getExamName());
+        exam.setExamCode(examCodeInt);
+        exam.setCreatorId(request.getCreatorId());
+        exam.setDescription(request.getDescription());
+        exam.setLimitMinutes(request.getDuration());
+        exam.setPaperShow(Boolean.TRUE.equals(request.getShowAnswers()));
+        exam.setStartTime(start);
+        exam.setEndTime(start.plusMinutes(request.getDuration()));
+        exam.setStatus(0);
+        examMapper.insert(exam);
+
+        Map<String, Object> data = new HashMap<>();
+        data.put("examId", exam.getId());
+        data.put("examCode", exam.getExamCode());
+        return Result.ok(data);
     }
 }

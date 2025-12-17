@@ -3,13 +3,11 @@ package org.example.examsystem.controller;
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.val;
-import org.apache.ibatis.annotations.Param;
 import org.example.examsystem.entity.Exam;
 import org.example.examsystem.entity.TesterExam;
 import org.example.examsystem.mapper.AnswerRecordMapper;
 import org.example.examsystem.mapper.ExamMapper;
 import org.example.examsystem.mapper.TesterExamMapper;
-import org.example.examsystem.service.IService.IExamPaperService;
 import org.example.examsystem.service.IService.IExamService;
 import org.example.examsystem.service.IService.IGradeService;
 import org.example.examsystem.vo.*;
@@ -19,7 +17,6 @@ import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
 import java.util.List;
-import java.util.Map;
 
 /**
  * 考试相关模块controller
@@ -103,7 +100,11 @@ public class ExamController {
         }
         // 查询考试
         LambdaQueryWrapper<Exam>  queryWrapper = new LambdaQueryWrapper<>();
-        queryWrapper.eq(Exam::getExamCode,code);
+        try{
+            queryWrapper.eq(Exam::getExamCode,Integer.valueOf(code));
+        }catch (NumberFormatException ex){
+            return Result.fail("考试码必须为6位数字");
+        }
         Exam exam =  examMapper.selectOne(queryWrapper);
         if(exam==null){
             return Result.info(404,"未找到该考试！");

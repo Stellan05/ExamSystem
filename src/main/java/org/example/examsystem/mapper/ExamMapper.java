@@ -14,4 +14,15 @@ public interface ExamMapper extends BaseMapper<Exam> {
      * @param creatorId 查询ID
      * @return 考试详细信息VO
      */
-    List<CreatorExamInfoVO> getExamListByCreatorId(@Param("creatorId") Long creatorId);}
+    List<CreatorExamInfoVO> getExamListByCreatorId(@Param("creatorId") Long creatorId);
+
+    /**
+     * 查询用户最近创建的、未开始的考试（用于自动关联题目）
+     */
+    Long getRecentUnstartedExamId(@Param("creatorId") Long creatorId);
+
+    /**
+     * 查询用户最近创建的考试（不限状态，用于自动关联题目兜底）
+     */
+    Long getRecentExamId(@Param("creatorId") Long creatorId);
+}
