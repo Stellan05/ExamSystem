@@ -9,5 +9,4 @@ import java.util.List;
 
 public interface IAbnormalBehaviorService extends IService<ExamAbnormalBehavior> {
     int reportBehavior(Long userId, Long examId, List<AbnormalBehaviorDTO> dto);
-    List<AbnormalInfoVO> getAllBehavior();
 }

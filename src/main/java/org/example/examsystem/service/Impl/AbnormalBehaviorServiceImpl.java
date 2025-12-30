@@ -39,12 +39,5 @@ public class AbnormalBehaviorServiceImpl extends ServiceImpl<AbnormalBehaviorMap
         return success ? entities.size() : 0;
     }
 
-    /**
-     * 获取所有abnormal behavior
-     * @return AbnormalBehaviorDTO
-     */
-    @Override
-    public List<AbnormalInfoVO> getAllBehavior() {
-        return
-    }
+
 }
