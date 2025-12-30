@@ -156,7 +156,6 @@ public class ExamPaperServiceImpl extends ServiceImpl<AnswerRecordMapper, Answer
         if (Boolean.FALSE.equals(first)) {
             throw new RuntimeException("请勿重复交卷");
         }
-        // TODO 另一个DTO来进行 redis 交互
 
         ExamSubmitMessage msg = new ExamSubmitMessage();
         msg.setUserId(userId);
@@ -230,8 +229,7 @@ public class ExamPaperServiceImpl extends ServiceImpl<AnswerRecordMapper, Answer
                 processSubmitMessage(msg);
                 processedCount++;
             } catch (Exception e) {
-                // 处理异常，记录日志，继续处理下一条
-                // TODO: 添加日志记录
+
                 e.printStackTrace();
             }
         }
