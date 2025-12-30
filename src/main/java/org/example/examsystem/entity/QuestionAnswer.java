@@ -22,6 +22,11 @@ public class QuestionAnswer {
      */
     private String correctAnswer;
 
+    /**
+     * 本题解析
+     */
+    private String answerAnalysis;
+
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;
 

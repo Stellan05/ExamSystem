@@ -1,0 +1,22 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.examsystem.mapper.AbnormalBehaviorMapper">
+    <select id="listAbnormalInfo" resultType="org.example.examsystem.vo.AbnormalInfoVO">
+        SELECT
+            ai.id,
+            ai.user_id AS userId,
+            u.real_name AS name,
+            u.email,
+            ai.behavior_type AS behaviorType,
+            ai.occur_time AS occurTime,
+            ai.remark
+        FROM exam_abnormal_behavior ai
+                 LEFT JOIN user u ON ai.user_id = u.id
+    </select>
+
+
+
+
+</mapper>

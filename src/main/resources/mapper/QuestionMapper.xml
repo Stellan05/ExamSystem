@@ -34,6 +34,23 @@
         WHERE question_id = #{questionId}
     </select>
 
+    <select id="selectQuestionsWithAnswer"
+            parameterType="long"
+            resultType="org.example.examsystem.dto.QuestionAnswerDTO">
+
+        SELECT
+            q.id              AS questionId,
+            q.question_type   AS questionType,
+            qa.correct_answer AS correctAnswer,
+            eq.score          AS score
+        FROM exam_question eq
+                 JOIN question q
+                      ON eq.question_id = q.id
+                 JOIN question_answer qa
+                      ON qa.question_id = q.id
+        WHERE eq.exam_id = #{examId}
+
+    </select>
 
 
 </mapper>

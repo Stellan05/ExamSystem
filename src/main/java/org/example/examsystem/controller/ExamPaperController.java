@@ -1,7 +1,11 @@
 package org.example.examsystem.controller;
 
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import org.example.examsystem.dto.JudgeRequest;
+import org.example.examsystem.dto.QuestionScoreDTO;
+import org.example.examsystem.entity.TesterExam;
+import org.example.examsystem.mapper.TesterExamMapper;
 import org.example.examsystem.service.IService.IExamPaperService;
 import org.example.examsystem.vo.Result;
 import org.springframework.web.bind.annotation.*;
@@ -17,6 +21,7 @@ import java.util.List;
 public class ExamPaperController {
 
     private final IExamPaperService examPaperService;
+    private final TesterExamMapper testerExamMapper;
 
     /**
      * 获取本次考试题目Id列表
@@ -56,17 +61,34 @@ public class ExamPaperController {
     /**
      * 评卷接口
      * @param examId 考试ID
-     * @param questionId 问题ID
-     * @param userId 考生ID
-     * @param judgeRequest 评卷DTO --- 内含分数
+     * @param judgeRequest 评卷DTO
      * @return 评卷成功
      */
-    @PostMapping("/{examId}/questions/{questionId}/judge")
+    @PostMapping("/{examId}/judge")
     public Result judgeQuestionAnswer(@PathVariable("examId") Long examId,
-                                      @PathVariable("questionId") Long questionId,
-                                      @RequestParam("userId") Long userId,
                                       @RequestBody JudgeRequest judgeRequest){
-        return null;
+        Long testerId = judgeRequest.getTesterId();
+        TesterExam result = testerExamMapper.selectOne(
+                new LambdaQueryWrapper<TesterExam>()
+                        .eq(TesterExam::getExamId,examId)
+                        .eq(TesterExam::getStudentId,testerId)
+        );
+        if(result==null){
+            return Result.info(404,"未找到对应考试");
+        }
+        Long testerExamId = result.getId();
+        List<QuestionScoreDTO> questions = judgeRequest.getQuestionScore();
+        // 单题评阅
+        for(QuestionScoreDTO q : questions){
+            examPaperService.reviewOneQuestion(
+                    testerExamId,
+                    q.getQuestionId(),
+                    q.getScore()
+            );
+        }
+
+        examPaperService.finishReview(testerExamId);
+        return Result.ok("批阅成功");
     }
 
 

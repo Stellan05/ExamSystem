@@ -1,5 +1,6 @@
 package org.example.examsystem.vo;
 
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 
 import java.util.List;
@@ -16,9 +17,13 @@ public class QuestionDetailVO {
     // 正确答案
     private String correctAnswer;
 
+    private String analysis;
+
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     // 考生提交的答案
     private String userAnswer;
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     // 该题得分
     private Double userScore;
 }

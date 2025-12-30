@@ -11,6 +11,7 @@
             q.content AS content,
             q.question_type AS type,
             eq.score AS score,
+            qa.answer_analysis AS analysis,
             qa.correct_answer AS correctAnswer,
             ar.student_answer AS userAnswer,
             ar.final_score AS userScore,
@@ -37,6 +38,7 @@
 
         <!-- 顶层简单属性 -->
         <result property="correctAnswer" column="correctAnswer"/>
+        <result property="analysis" column="analysis"/>
         <result property="userAnswer" column="userAnswer"/>
         <result property="userScore" column="userScore"/>
 
@@ -71,12 +73,9 @@
             eq.exam_id          AS examId,
             ar.question_id      AS questionId,
             te.student_id       AS studentId,
-
             q.question_type     AS questionType,
             q.content           AS content,
-
             qa.correct_answer   AS correctAnswer,
-
             ar.student_answer   AS studentAnswer,
             eq.score            AS score,
             ar.teacher_score    AS teacherScore,

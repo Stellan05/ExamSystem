@@ -1,23 +1,40 @@
 package org.example.examsystem.service.Impl;
 
+import cn.hutool.json.JSONUtil;
+import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
+import com.baomidou.mybatisplus.core.conditions.update.LambdaUpdateWrapper;
 import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.conditions.query.LambdaQueryChainWrapper;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
+import org.example.examsystem.dto.AnswerDTO;
+import org.example.examsystem.dto.ExamSubmitDTO;
+import org.example.examsystem.dto.ExamSubmitMessage;
+import org.example.examsystem.dto.QuestionAnswerDTO;
 import org.example.examsystem.dto.StudentReviewCount;
 import org.example.examsystem.entity.AnswerRecord;
 import org.example.examsystem.entity.ExamQuestion;
 import org.example.examsystem.entity.TesterExam;
 import org.example.examsystem.mapper.AnswerRecordMapper;
 import org.example.examsystem.mapper.ExamQuestionMapper;
+import org.example.examsystem.mapper.QuestionMapper;
 import org.example.examsystem.mapper.TesterExamMapper;
 import org.example.examsystem.service.IService.IExamPaperService;
 import org.example.examsystem.vo.ProgressVO;
 import org.example.examsystem.vo.QuestionDetailVO;
 import org.example.examsystem.vo.TeacherReviewQuestionDetailVO;
+import org.springframework.data.redis.core.*;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.List;
+import java.util.Map;
+import java.util.stream.Collectors;
 
 @Service
 @RequiredArgsConstructor
@@ -26,6 +43,8 @@ public class ExamPaperServiceImpl extends ServiceImpl<AnswerRecordMapper, Answer
     private final AnswerRecordMapper answerRecordMapper;
     private final ExamQuestionMapper examQuestionMapper;
     private final TesterExamMapper  testerExamMapper;
+    private final QuestionMapper questionMapper;
+    private final StringRedisTemplate redisTemplate;
 
     /**
      * 考生查看作答详细
@@ -77,17 +96,6 @@ public class ExamPaperServiceImpl extends ServiceImpl<AnswerRecordMapper, Answer
         return answerRecordMapper.getTeacherReviewDetail(examId,questionId,studentId);
     }
 
-    /**
-     * @param examId 考试ID
-     * @param questionId 问题ID
-     * @param studentId 考生ID
-     * @param score 分数
-     * @return success
-     */
-    @Override
-    public Boolean judge(Long examId, Long questionId, Long studentId,Integer score) {
-        return null;
-    }
 
     /**
      * 获取评卷进度
@@ -102,7 +110,6 @@ public class ExamPaperServiceImpl extends ServiceImpl<AnswerRecordMapper, Answer
                         .eq(TesterExam::getExamId, examId)
                         .eq(TesterExam::getIsDeleted, 0)
         );
-
         // 说明本次考试都是客观题
         if (totalStudents == 0) {
             return new ProgressVO(0, 0);
@@ -124,4 +131,288 @@ public class ExamPaperServiceImpl extends ServiceImpl<AnswerRecordMapper, Answer
 
         return new ProgressVO(reviewedStudents, totalStudents);
     }
+
+    /**
+     * 交卷接口，仅存入数据库
+     * @param dto 交卷DTO
+     */
+    public void submitExam(ExamSubmitDTO dto,Long userId) {
+        Long examId = dto.getExamId();
+         // 效验考试状态
+        TesterExam testerExam = testerExamMapper.selectOne(
+                new LambdaQueryWrapper<TesterExam>()
+                        .eq(TesterExam::getExamId,examId)
+                        .eq(TesterExam::getStudentId,userId)
+        );
+        if (testerExam == null||!testerExam.getStatus().equals(1)) {
+            throw new RuntimeException("考试状态异常，请联系管理员");
+        }
+        String key = "exam:submit:"+examId+":"+userId;
+
+         // 使用setNx防止重复交卷 --- TTL 过期五分钟自动删除
+        Boolean first = redisTemplate.opsForValue()
+                .setIfAbsent(key, "1", Duration.ofMinutes(10));
+
+        if (Boolean.FALSE.equals(first)) {
+            throw new RuntimeException("请勿重复交卷");
+        }
+        // TODO 另一个DTO来进行 redis 交互
+
+        ExamSubmitMessage msg = new ExamSubmitMessage();
+        msg.setUserId(userId);
+        msg.setExamId(dto.getExamId());
+        msg.setSubmitTime(dto.getSubmitTime());
+        msg.setAnswers(dto.getAnswers());
+        msg.setAttemptId(testerExam.getId());
+
+
+        //  入 Redis 队列
+        redisTemplate.opsForList()
+                     .leftPush("exam:submit:queue", JSONUtil.toJsonStr(msg));
+    }
+
+    /**
+     * 异步入库：考生提交试卷---同时拉取试题答案，判断客观题答案
+     * 在5秒内轮询处理，每次批量处理一定数量的数据，Redis队列为空时立即退出
+     */
+    @Scheduled(fixedDelay = 5000)
+    public void syncSubmit(){
+        // 检查Redis队列是否有数据，如果没有数据则直接返回，避免空跑
+        Long queueSize = redisTemplate.opsForList().size("exam:submit:queue");
+        if (queueSize == null || queueSize == 0) {
+            System.out.println("redis无数据");
+            return;
+        }
+
+        // 设置处理时间窗口为5秒
+        long startTime = System.currentTimeMillis();
+        long timeLimit = 5000; // 5秒
+        int batchSize = 20; // 每次批量处理消息数量
+
+        // 在5秒内循环处理
+        while (System.currentTimeMillis() - startTime < timeLimit) {
+            // 批量处理一定数量的消息
+            int processedCount = processBatch(batchSize);
+
+            // 如果本次没有处理任何消息，说明队列已空，退出循环
+            if (processedCount == 0) {
+                break;
+            }
+
+            // 如果处理时间接近限制，退出循环
+            if (System.currentTimeMillis() - startTime >= timeLimit - 100) {
+                break;
+            }
+        }
+    }
+
+    /**
+     * 批量处理交卷消息
+     * @param batchSize 批量处理数量
+     * @return 实际处理的消息数量
+     */
+    @Transactional
+    public int processBatch(int batchSize) {
+        int processedCount = 0;
+
+        for (int i = 0; i < batchSize; i++) {
+            // 从Redis队列中获取交卷消息
+            String json = redisTemplate.opsForList()
+                    .rightPop("exam:submit:queue");
+
+            // 如果队列为空，退出循环
+            if (json == null) {
+                break;
+            }
+
+            try {
+                ExamSubmitMessage msg = JSONUtil.toBean(json, ExamSubmitMessage.class);
+                processSubmitMessage(msg);
+                processedCount++;
+            } catch (Exception e) {
+                // 处理异常，记录日志，继续处理下一条
+                // TODO: 添加日志记录
+                e.printStackTrace();
+            }
+        }
+
+        return processedCount;
+    }
+
+    /**
+     * 处理单条交卷消息
+     * @param msg 交卷消息
+     */
+    @Transactional
+    public void processSubmitMessage(ExamSubmitMessage msg) {
+        Long examId = msg.getExamId();
+        Long userId = msg.getUserId();
+        Long attemptId = msg.getAttemptId();
+
+        // 查询本场考试关联的题目及其答案
+        List<QuestionAnswerDTO> questionList = questionMapper.selectQuestionsWithAnswer(examId);
+
+        // 将题目列表转换为Map，方便根据questionId快速查找
+        Map<Long, QuestionAnswerDTO> questionMap = questionList.stream()
+                .collect(Collectors.toMap(QuestionAnswerDTO::getQuestionId, q -> q));
+
+        // 获取考生的作答记录（从Redis消息中获取）
+        List<AnswerDTO> studentAnswers = msg.getAnswers();
+
+        // 遍历考生的答案，进行比对和评分
+        for (AnswerDTO studentAnswer : studentAnswers) {
+            Long questionId = studentAnswer.getQuestionId();
+            QuestionAnswerDTO question = questionMap.get(questionId);
+
+            if (question == null) {
+                continue; // 题目不存在，跳过
+            }
+
+            // 将学生答案转换为String存储
+            String studentAnswerStr = convertAnswerToString(studentAnswer.getAnswer());
+            String correctAnswer = question.getCorrectAnswer();
+
+            // 创建作答记录
+            AnswerRecord answerRecord = new AnswerRecord();
+            answerRecord.setStudentExamId(attemptId); // 使用attemptId，不是examId
+            answerRecord.setQuestionId(questionId);
+            answerRecord.setStudentAnswer(studentAnswerStr);
+
+            // 判断题目类型：5为主观题，其他为客观题
+            Integer questionType = question.getQuestionType();
+            if (questionType != null && questionType == 5) {
+                // 主观题：不自动判分，等待教师批阅
+                answerRecord.setAutoScore(0);
+                answerRecord.setIsReviewed(0); // 未批阅
+                answerRecord.setFinalScore(0); // 初始分数为0
+            } else {
+                // 客观题：自动判分
+                boolean isCorrect = compareAnswers(studentAnswerStr, correctAnswer);
+                Double questionScore = question.getScore();
+                Integer autoScore = isCorrect ? questionScore.intValue() : 0;
+
+                answerRecord.setAutoScore(autoScore);
+                answerRecord.setIsReviewed(1); // 客观题自动批阅完成
+                answerRecord.setFinalScore(autoScore); // 客观题最终分数等于自动分数
+            }
+
+            // 插入作答记录
+            answerRecordMapper.insert(answerRecord);
+        }
+
+        // 更新考生考试状态为已提交
+        LocalDateTime submitTime = LocalDateTime.ofInstant(
+                Instant.ofEpochMilli(msg.getSubmitTime()),
+                ZoneId.systemDefault()
+        );
+
+        testerExamMapper.update(
+                null,
+                new LambdaUpdateWrapper<TesterExam>()
+                        .eq(TesterExam::getId, attemptId)
+                        .set(TesterExam::getStatus, 2) // 已提交
+                        .set(TesterExam::getSubmitTime, submitTime)
+        );
+    }
+
+    /**
+     * 将答案对象转换为String
+     * @param answer 答案对象（可能是String、List或null）
+     * @return 答案字符串
+     */
+    private String convertAnswerToString(Object answer) {
+        if (answer == null) {
+            return "";
+        }
+        if (answer instanceof String) {
+            return (String) answer;
+        }
+        if (answer instanceof List) {
+            return JSONUtil.toJsonStr(answer);
+        }
+        return String.valueOf(answer);
+    }
+
+    /**
+     * 比对答案（支持字符串和JSON格式的列表）
+     * @param studentAnswer 学生答案
+     * @param correctAnswer 正确答案
+     * @return 是否匹配
+     */
+    private boolean compareAnswers(String studentAnswer, String correctAnswer) {
+        if (studentAnswer == null || correctAnswer == null) {
+            return false;
+        }
+
+        // 去除空格后比较
+        String studentTrimmed = studentAnswer.trim();
+        String correctTrimmed = correctAnswer.trim();
+
+        // 直接字符串比较
+        if (studentTrimmed.equals(correctTrimmed)) {
+            return true;
+        }
+
+        // 尝试JSON解析后比较（处理列表答案的情况）
+        try {
+            Object studentObj = JSONUtil.parse(studentTrimmed);
+            Object correctObj = JSONUtil.parse(correctTrimmed);
+            return JSONUtil.toJsonStr(studentObj).equals(JSONUtil.toJsonStr(correctObj));
+        } catch (Exception e) {
+            // 解析失败，使用字符串比较
+            return false;
+        }
+    }
+
+
+    /**
+     *
+     * @param studentExamId 对应考试Id
+     * @param questionId 问题Id
+     * @param teacherScore 教师评分
+     */
+    @Transactional
+    public void reviewOneQuestion(Long studentExamId,
+                                  Long questionId,
+                                  Double teacherScore) {
+
+        answerRecordMapper.update(
+                null,
+                new LambdaUpdateWrapper<AnswerRecord>()
+                        .eq(AnswerRecord::getStudentExamId, studentExamId)
+                        .eq(AnswerRecord::getQuestionId, questionId)
+                        .eq(AnswerRecord::getIsReviewed, 0) // 防重复
+                        .set(AnswerRecord::getTeacherScore, teacherScore)
+                        .setSql("final_score = auto_score + " + teacherScore)
+                        .set(AnswerRecord::getIsReviewed, 1)
+        );
+    }
+
+    @Transactional
+    public void finishReview(Long studentExamId) {
+
+        // 1. 是否还有未批阅题目
+        Long unReviewedCount = answerRecordMapper.selectCount(
+                new LambdaQueryWrapper<AnswerRecord>()
+                        .eq(AnswerRecord::getStudentExamId, studentExamId)
+                        .eq(AnswerRecord::getIsReviewed, 0)
+        );
+
+        if (unReviewedCount > 0) {
+            return; // 还有题没批，不动状态
+        }
+
+        // 2. 汇总总分
+        Integer totalScore = answerRecordMapper.sumFinalScore(studentExamId);
+
+        // 3. 更新答卷
+        testerExamMapper.update(
+                null,
+                new LambdaUpdateWrapper<TesterExam>()
+                        .eq(TesterExam::getId, studentExamId)
+                        .set(TesterExam::getTotalScore, totalScore)
+                        .set(TesterExam::getStatus, 2)
+        );
+    }
+
 }

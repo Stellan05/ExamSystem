@@ -19,7 +19,12 @@ public interface IExamPaperService extends IService<AnswerRecord> {
 
     List<Long> getSubjectiveQuestionIds(Long examId);
 
-    Boolean judge(Long examId,Long questionId,Long studentId,Integer score);
-
     ProgressVO getReviewProgress(Long examId);
+
+    void reviewOneQuestion(Long studentExamId,
+                           Long questionId,
+                           Double teacherScore);
+
+    void finishReview(Long studentExamId);
+
 }

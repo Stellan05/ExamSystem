@@ -4,6 +4,8 @@ import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
 import lombok.val;
 import org.apache.ibatis.annotations.Param;
+import org.example.examsystem.dto.AbnormalBehaviorDTO;
+import org.example.examsystem.dto.ExamSubmitDTO;
 import org.example.examsystem.entity.Exam;
 import org.example.examsystem.entity.TesterExam;
 import org.example.examsystem.mapper.AnswerRecordMapper;
@@ -12,6 +14,8 @@ import org.example.examsystem.mapper.TesterExamMapper;
 import org.example.examsystem.service.IService.IExamPaperService;
 import org.example.examsystem.service.IService.IExamService;
 import org.example.examsystem.service.IService.IGradeService;
+import org.example.examsystem.service.Impl.AbnormalBehaviorServiceImpl;
+import org.example.examsystem.service.Impl.ExamPaperServiceImpl;
 import org.example.examsystem.vo.*;
 import org.springframework.beans.BeanUtils;
 import org.springframework.transaction.annotation.Transactional;
@@ -34,6 +38,8 @@ public class ExamController {
     private final AnswerRecordMapper answerRecordMapper;
     private final IGradeService gradeService;
     private final TesterExamMapper testerExamMapper;
+    private final AbnormalBehaviorServiceImpl abnormalBehaviorService;
+    private final ExamPaperServiceImpl examPaperService;
 
     /**
      * 分页查询参加本场考试人员信息
@@ -57,22 +63,23 @@ public class ExamController {
      */
     @PostMapping("/my-exam/tester")
     public Result getTesterExams(
-            @RequestParam("userId") long userId,
+
             @RequestParam(defaultValue = "1") int page,
             @RequestParam(defaultValue = "10") int size
     ){
-        if(examService.getTesterExams(userId,page,size)!=null){
-            return Result.ok(examService.getTesterExams(userId,page,size));
+        if(examService.getTesterExams(3L,page,size)!=null){
+            return Result.ok(examService.getTesterExams(3L,page,size));
         }else{
             return Result.fail("错误参数");
         }
     }
 
-    @PostMapping("/my-exam/creator")
-    public Result getCreatorExam(@RequestParam("userId") long userId,
+    @GetMapping("/my-exam/creator")
+    public Result getCreatorExam(
                                  @RequestParam(defaultValue = "1") int page,
                                  @RequestParam(defaultValue = "10") int size){
-        val result = examService.getCreatorExams(userId, page, size);
+        val result = examService.getCreatorExams(2L, page, size);
+
         if(result!=null){
             return Result.ok(result);
         }else{
@@ -80,13 +87,30 @@ public class ExamController {
         }
     }
 
+    /**
+     * 获取本场考试详细信息，即整卷浏览
+     * @param examId 考试ID
+     * @param userId 用户ID
+     * @return 题目及其作答情况
+     */
     @GetMapping("my-exam/details/{examId}")
     public Result getMyExamDetails(
             @PathVariable("examId") Long examId,
             @RequestParam Long userId
     ){
-        List<QuestionDetailVO> list = answerRecordMapper.getQuestionDetails(examId,userId);
-        return Result.ok(list);
+        TesterExam testerExam = testerExamMapper.selectOne(
+                new LambdaQueryWrapper<TesterExam>()
+                        .eq(TesterExam::getExamId, examId)
+                        .eq(TesterExam::getStudentId, userId)
+        );
+        if(testerExam==null){
+            return Result.info(404,"未找到该考试记录");
+        }
+        List<QuestionDetailVO> questions = answerRecordMapper.getQuestionDetails(examId,userId);
+        Exam exam = examMapper.selectById(examId);
+        ExamDetailVO examDetailVO = new ExamDetailVO(exam,questions);
+
+        return Result.ok(examDetailVO);
     }
 
     /**
@@ -164,5 +188,51 @@ public class ExamController {
                                   @RequestParam(defaultValue = "1") int page,
                                   @RequestParam(defaultValue = "10") int size){
         return Result.ok(gradeService.getGrades(examId,page,size));
+    }
+
+    /**
+     * 获取本场考试基本的基本统计数据
+     * @param examId 考试Id
+     * @return 数据
+     */
+    @GetMapping("/{examId}/distribution")
+    public Map<String, Object> getBasic(@PathVariable Long examId) {
+        return examService.getBasicStats(examId);
+    }
+
+    /**
+     * 获取本场考试各个分数段人数
+     * @param examId 考试Id
+     * @return 分数段及其人数 Map
+     */
+    @GetMapping("/{examId}/ranges")
+    public List<Map<String, Object>> getRanges(@PathVariable Long examId) {
+        return examService.getScoreRanges(examId);
+    }
+
+    /**
+     * 提交异常记录
+     * @param examId 考试ID
+     * @param userId 用户ID
+     */
+    @PostMapping("/{examId}/submit/abnormal")
+    public Result submitAbnormal(@PathVariable("examId") Long examId,
+                                 @RequestParam("userId") Long userId,
+                                 @RequestBody List<AbnormalBehaviorDTO> list){
+        int result = abnormalBehaviorService.reportBehavior(examId,userId,list);
+        return Result.ok(result);
+    }
+
+    /**
+     * 考生交卷
+     * @param examId 考试ID
+     * @param dto 交卷DTO
+     */
+    @PostMapping("/{examId}/submit/paper")
+    public Result submitPaper(@PathVariable("examId") Long examId, @RequestBody ExamSubmitDTO dto){
+        // 先调用存Redis接口
+        examPaperService.submitExam(dto,3L);
+        return Result.ok("交卷成功");
+        // 之后交给定时任务
     }
 }

@@ -9,6 +9,7 @@ import org.example.examsystem.vo.RankInfoVO;
 import org.example.examsystem.vo.UserSimpleInfoVO;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 试卷类接口
@@ -26,4 +27,10 @@ public interface IExamService extends IService<Exam>{
     Page<UserSimpleInfoVO> getAllTesters(Long userId, Integer page, Integer pageSize);
 
     List<QuestionSimpleInfoVO> getQuestions(@Param("examId")Long examId);
+
+    Map<String, Object> getBasicStats(Long examId);
+
+    List<Map<String, Object>> getScoreRanges(Long examId);
+
+
 }

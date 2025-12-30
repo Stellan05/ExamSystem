@@ -11,7 +11,9 @@ import org.example.examsystem.service.IService.IExamService;
 import org.example.examsystem.vo.*;
 import org.springframework.stereotype.Service;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Map;
 
 @Service
 @RequiredArgsConstructor
@@ -21,6 +23,9 @@ public class ExamServiceImpl extends ServiceImpl<ExamMapper,Exam> implements IEx
     private final TesterExamMapper testerExamMapper;
     private final AnswerRecordMapper answerRecordMapper;
     private final QuestionMapper questionMapper;
+
+
+
 
     /**
      * 用户获取自己 参加过的考试
@@ -96,5 +101,31 @@ public class ExamServiceImpl extends ServiceImpl<ExamMapper,Exam> implements IEx
     @Override
     public List<QuestionSimpleInfoVO> getQuestions(Long examId) {
         return questionMapper.getQuestions(examId);
+    }
+
+    /**
+     * 获取成绩基本信息
+     * @param examId 考试ID
+     * @return Map
+     */
+    public Map<String, Object> getBasicStats(Long examId) {
+        return testerExamMapper.getBasicStats(examId);
+    }
+
+    /**
+     * 分数段统计
+     * @param examId 考试ID
+     * @return List
+     */
+    public List<Map<String, Object>> getScoreRanges(Long examId) {
+        List<Map<String, Integer>> ranges = List.of(
+                Map.of("start", 0, "end", 59),
+                Map.of("start", 60, "end", 69),
+                Map.of("start", 70, "end", 79),
+                Map.of("start", 80, "end", 89),
+                Map.of("start", 90, "end", 100)
+        );
+
+        return testerExamMapper.getScoreRanges(examId, ranges);
     }
 }

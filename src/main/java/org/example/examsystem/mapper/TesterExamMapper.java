@@ -8,6 +8,7 @@ import org.example.examsystem.entity.TesterExam;
 import org.example.examsystem.vo.*;
 
 import java.util.List;
+import java.util.Map;
 
 public interface TesterExamMapper extends BaseMapper<TesterExam> {
 
@@ -20,4 +21,14 @@ public interface TesterExamMapper extends BaseMapper<TesterExam> {
     RankInfoVO getRank(@Param("examId") Long examId, @Param("studentId") Long studentId);
 
     Page<GradeInfoVO> getGrades(Page<?> page, @Param("examId") Long examId);
+
+    // 基本统计
+    Map<String, Object> getBasicStats(@Param("examId") Long examId);
+
+    // 分数段统计
+    List<Map<String, Object>> getScoreRanges(
+            @Param("examId") Long examId,
+            @Param("ranges") List<Map<String, Integer>> ranges
+    );
+
 }
