@@ -150,6 +150,7 @@ public class ExamController {
             @PathVariable("examId") Long examId,
             @RequestParam("userId")  Long userId
     ){
+
         // 加入考试后创建考试信息关联表
         TesterExam testerExam = new TesterExam();
         testerExam.setExamId(examId);
