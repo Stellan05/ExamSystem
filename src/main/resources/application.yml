@@ -6,7 +6,7 @@ spring:
     name: ExamSystem
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://localhost:3306/examsystem?useSSL=false&serverTimezone=UTC&allowPublicKeyRetrieval=true
+    url: jdbc:mysql://localhost:3306/examsystem?useUnicode=true&characterEncoding=UTF-8&serverTimezone=UTC
     username: root
     password: bhr050219
   redis:
@@ -18,13 +18,36 @@ spring:
         max-idle: 10
         min-idle: 1
         time-between-eviction-runs: 10s
-
+  mail:
+    host: smtp.qq.com
+    port: 465
+    username: 2863848911@qq.com
+    password: rmvdtnfxyvixdegj
+    protocol: smtps
+    properties:
+      mail:
+        smtp:
+          auth: true
+          starttls:
+            enable: true
+            required: true
+    default-encoding: UTF-8
 logging:
   level:
     com.baomidou.mybatisplus.samples.quickstart: debug
+    org.example.examsystem.controller: info
+    org.springframework.web: info
 
 mybatis-plus:
   configuration:
     log-impl: org.apache.ibatis.logging.stdout.StdOutImpl
     map-underscore-to-camel-case: true
   mapper-locations: classpath*:mapper/**.xml
+
+mybatis:
+  #mapper配置文件
+  mapper-locations: classpath:mapper/*.xml
+  type-aliases-package: com.sky.entity
+  configuration:
+    #开启驼峰命名
+    map-underscore-to-camel-case: true
