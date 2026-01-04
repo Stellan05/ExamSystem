@@ -5,5 +5,5 @@ import lombok.Data;
 @Data
 public class QuestionScoreDTO {
     private Long questionId;
-    private Double score;
+    private Double userScore;
 }

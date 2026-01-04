@@ -23,7 +23,7 @@ public class ExamQuestion {
     private Long questionId;
 
     // 本题在本次考试的分值
-    private Integer score;
+    private Double score;
 
     private Integer sort;
 

@@ -132,6 +132,99 @@ public class ExamPaperServiceImpl extends ServiceImpl<AnswerRecordMapper, Answer
         return new ProgressVO(reviewedStudents, totalStudents);
     }
 
+
+    /**
+     * 答案保存进redis接口---暂存或最终提交
+     */
+    private void saveAnswers(ExamSubmitDTO dto,
+                             TesterExam testerExam,
+                             boolean finalSubmit) {
+
+        ExamSubmitMessage msg = new ExamSubmitMessage();
+        msg.setUserId(testerExam.getStudentId());
+        msg.setExamId(dto.getExamId());
+        msg.setSubmitTime(dto.getSubmitTime());
+        msg.setAnswers(dto.getAnswers());
+        msg.setAttemptId(testerExam.getId());
+        msg.setFinalSubmit(finalSubmit);
+
+        if (finalSubmit) {
+            // 最终提交：存入队列
+            redisTemplate.opsForList()
+                    .leftPush("exam:submit:queue", JSONUtil.toJsonStr(msg));
+        } else {
+            // 暂存：使用Hash存储，方便快速查找（key: exam:auto:save:{examId}:{userId}）
+            String hashKey = "exam:auto:save:" + dto.getExamId() + ":" + testerExam.getStudentId();
+            redisTemplate.opsForValue()
+                    .set(hashKey, JSONUtil.toJsonStr(msg), Duration.ofHours(2)); // 暂存数据保留7天
+        }
+    }
+
+    /**
+     * 暂存考试答案到Redis
+     * @param dto 考试提交DTO
+     * @param userId 用户ID
+     */
+    public void autoSaveExam(ExamSubmitDTO dto, Long userId) {
+
+        Long examId;
+        examId = dto.getExamId();
+        // 效验考试状态
+        TesterExam testerExam = testerExamMapper.selectOne(
+                new LambdaQueryWrapper<TesterExam>()
+                        .eq(TesterExam::getExamId,examId)
+                        .eq(TesterExam::getStudentId,userId)
+        );
+        if (testerExam == null||!testerExam.getStatus().equals(1)) {
+            throw new RuntimeException("考试状态异常，请联系管理员");
+        }
+        // 允许反复覆盖
+
+        saveAnswers(dto, testerExam, false);
+    }
+
+    /**
+     * 从Redis获取暂存的考试答案
+     * @param examId 考试ID
+     * @param userId 用户ID
+     * @return 暂存的考试提交DTO，如果不存在则返回null
+     */
+    public ExamSubmitDTO getAutoSaveExam(Long examId, Long userId) {
+        // 验证考试状态
+        TesterExam testerExam = testerExamMapper.selectOne(
+                new LambdaQueryWrapper<TesterExam>()
+                        .eq(TesterExam::getExamId, examId)
+                        .eq(TesterExam::getStudentId, userId)
+        );
+        if (testerExam == null || !testerExam.getStatus().equals(1)) {
+            throw new RuntimeException("考试状态异常，请联系管理员");
+        }
+
+        // 从Redis获取暂存数据
+        String hashKey = "exam:auto:save:" + examId + ":" + userId;
+        String json = redisTemplate.opsForValue().get(hashKey);
+
+        if (json == null || json.isEmpty()) {
+            return null; // 没有暂存数据
+        }
+
+        try {
+            // 解析Redis中的消息
+            ExamSubmitMessage msg = JSONUtil.toBean(json, ExamSubmitMessage.class);
+            
+            // 转换为ExamSubmitDTO返回
+            ExamSubmitDTO dto = new ExamSubmitDTO();
+            dto.setExamId(msg.getExamId());
+            dto.setSubmitTime(msg.getSubmitTime());
+            dto.setAnswers(msg.getAnswers());
+            
+            return dto;
+        } catch (Exception e) {
+            e.printStackTrace();
+            throw new RuntimeException("获取暂存数据失败，数据格式异常");
+        }
+    }
+
     /**
      * 交卷接口，仅存入数据库
      * @param dto 交卷DTO
@@ -157,17 +250,7 @@ public class ExamPaperServiceImpl extends ServiceImpl<AnswerRecordMapper, Answer
             throw new RuntimeException("请勿重复交卷");
         }
 
-        ExamSubmitMessage msg = new ExamSubmitMessage();
-        msg.setUserId(userId);
-        msg.setExamId(dto.getExamId());
-        msg.setSubmitTime(dto.getSubmitTime());
-        msg.setAnswers(dto.getAnswers());
-        msg.setAttemptId(testerExam.getId());
-
-
-        //  入 Redis 队列
-        redisTemplate.opsForList()
-                     .leftPush("exam:submit:queue", JSONUtil.toJsonStr(msg));
+       saveAnswers(dto,testerExam,true);
     }
 
     /**
@@ -401,7 +484,7 @@ public class ExamPaperServiceImpl extends ServiceImpl<AnswerRecordMapper, Answer
         }
 
         // 2. 汇总总分
-        Integer totalScore = answerRecordMapper.sumFinalScore(studentExamId);
+        Double totalScore = answerRecordMapper.sumFinalScore(studentExamId);
 
         // 3. 更新答卷
         testerExamMapper.update(

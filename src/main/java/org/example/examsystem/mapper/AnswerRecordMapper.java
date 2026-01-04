@@ -30,5 +30,5 @@ public interface AnswerRecordMapper extends BaseMapper<AnswerRecord> {
     WHERE student_exam_id = #{studentExamId}
       AND is_deleted = 0
 """)
-    Integer sumFinalScore(@Param("studentExamId") Long studentExamId);
+    Double sumFinalScore(@Param("studentExamId") Long studentExamId);
 }

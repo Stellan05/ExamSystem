@@ -77,13 +77,13 @@ public class ExamPaperController {
             return Result.info(404,"未找到对应考试");
         }
         Long testerExamId = result.getId();
-        List<QuestionScoreDTO> questions = judgeRequest.getQuestionScore();
+        List<QuestionScoreDTO> questions = judgeRequest.getQuestions();
         // 单题评阅
         for(QuestionScoreDTO q : questions){
             examPaperService.reviewOneQuestion(
                     testerExamId,
                     q.getQuestionId(),
-                    q.getScore()
+                    q.getUserScore()
             );
         }
 

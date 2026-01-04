@@ -32,7 +32,7 @@ public class TesterExam {
     private Integer duration;
 
     
-    private Integer totalScore;
+    private Double totalScore;
 
     // 答卷状态 0未开始 1作答中 2已提交
     private Integer status;

@@ -84,27 +84,23 @@
         FROM answer_record ar
                  JOIN tester_exam te
                       ON ar.student_exam_id = te.id
-                          AND te.exam_id = #{examId}
-                          AND te.student_id = #{studentId}
-                          AND te.is_deleted = 0
-
                  JOIN exam_question eq
-                      ON eq.exam_id = #{examId}
-                          AND eq.question_id = #{questionId}
-                          AND eq.is_deleted = 0
-
+                      ON eq.exam_id = te.exam_id
                  JOIN question q
                       ON q.id = ar.question_id
-                          AND q.id = #{questionId}
-                          AND q.question_type = 5          -- 只允许主观题
-                          AND q.is_deleted = 0
-
                  LEFT JOIN question_answer qa
                            ON qa.question_id = q.id
 
         WHERE ar.is_deleted = 0
+          AND te.is_deleted = 0
+          AND eq.is_deleted = 0
+          AND q.is_deleted = 0
+          AND q.question_type = 5
+          -- 统一使用传入的参数进行过滤
+          AND te.exam_id = #{examId}
+          AND te.student_id = #{studentId}
           AND ar.question_id = #{questionId}
-
+          AND eq.question_id = #{questionId}
     </select>
 
 

@@ -7,5 +7,5 @@ import org.example.examsystem.vo.AbnormalInfoVO;
 import java.util.List;
 
 public interface AbnormalBehaviorMapper extends BaseMapper<ExamAbnormalBehavior> {
-    List<AbnormalInfoVO> listAbnormalInfo();
+    List<AbnormalInfoVO> listAbnormalInfo(Long examId);
 }

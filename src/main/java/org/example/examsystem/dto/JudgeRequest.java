@@ -10,6 +10,6 @@ import java.util.List;
 @Data
 public class JudgeRequest {
     private Long testerId;
-    private List<QuestionScoreDTO> questionScore;
+    private List<QuestionScoreDTO> questions;
 
 }

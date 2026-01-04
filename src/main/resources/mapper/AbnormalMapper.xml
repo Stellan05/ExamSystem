@@ -13,7 +13,8 @@
             ai.occur_time AS occurTime,
             ai.remark
         FROM exam_abnormal_behavior ai
-                 LEFT JOIN user u ON ai.user_id = u.id
+        LEFT JOIN user u ON ai.user_id = u.id
+        WHERE ai.exam_id = ${examId}
     </select>
 
 
