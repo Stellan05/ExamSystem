@@ -30,6 +30,12 @@ public interface IExamService extends IService<Exam>{
 
     List<QuestionSimpleInfoVO> getQuestions(@Param("examId")Long examId);
 
+    Map<String, Object> getBasicStats(Long examId);
+
+    List<Map<String, Object>> getScoreRanges(Long examId);
+
+
+
     /**
      * 创建考试（含题目绑定）
      * @return Map包含examId、examCode、questions，如果创建失败抛出异常

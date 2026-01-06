@@ -4,6 +4,7 @@ import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
+import java.util.Date;
 
 @TableName("question_answer")
 @Data
@@ -25,6 +26,11 @@ public class QuestionAnswer {
      * 答案解析
      */
     @TableField("answer_analysis")
+    private String answerAnalysis;
+
+    /**
+     * 本题解析
+     */
     private String answerAnalysis;
 
     @TableField(fill = FieldFill.INSERT)

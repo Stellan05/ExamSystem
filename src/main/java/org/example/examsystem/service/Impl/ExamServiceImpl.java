@@ -22,12 +22,14 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
+import java.util.Map;
 
 @Slf4j
 @Service
@@ -41,6 +43,9 @@ public class ExamServiceImpl extends ServiceImpl<ExamMapper,Exam> implements IEx
     private final QuestionAnswerMapper questionAnswerMapper;
     private final QuestionOptionMapper questionOptionMapper;
     private final ExamQuestionMapper examQuestionMapper;
+
+
+
 
     /**
      * 用户获取自己 参加过的考试
@@ -182,7 +187,7 @@ public class ExamServiceImpl extends ServiceImpl<ExamMapper,Exam> implements IEx
             for (int i = 0; i < request.getQuestions().size(); i++) {
                 QuestionInExamDTO questionDTO = request.getQuestions().get(i);
                 int questionIndex = i + 1;
-                
+
                 // 验证题目信息
                 if (questionDTO.getQuestionType() == null || questionDTO.getQuestionType().trim().isEmpty()) {
                     throw new IllegalArgumentException(String.format("第%d道题目的题型(questionType)不能为空", questionIndex));
@@ -193,11 +198,11 @@ public class ExamServiceImpl extends ServiceImpl<ExamMapper,Exam> implements IEx
                 if (questionDTO.getScore() == null || questionDTO.getScore() <= 0) {
                     throw new IllegalArgumentException(String.format("第%d道题目的分数(score)必须大于0", questionIndex));
                 }
-                
+
                 // 调试日志：检查 options 字段
-                log.info("第{}道题目 - options值: {}, 是否为null: {}, 是否为空: {}", 
-                    questionIndex, 
-                    questionDTO.getOptions(), 
+                log.info("第{}道题目 - options值: {}, 是否为null: {}, 是否为空: {}",
+                    questionIndex,
+                    questionDTO.getOptions(),
                     questionDTO.getOptions() == null,
                     questionDTO.getOptions() != null && questionDTO.getOptions().isEmpty());
 
@@ -250,9 +255,9 @@ public class ExamServiceImpl extends ServiceImpl<ExamMapper,Exam> implements IEx
                 // 创建选项（仅选择/判断题需要）- 直接使用 List<String>
                 if (questionType == 1 || questionType == 2) {
                     List<String> optionsList = questionDTO.getOptions();
-                    log.info("第{}道题目 - 题型: {}, options: {}, 是否为null: {}", 
+                    log.info("第{}道题目 - 题型: {}, options: {}, 是否为null: {}",
                         questionIndex, questionType, optionsList, optionsList == null);
-                    
+
                     if (optionsList == null || optionsList.isEmpty()) {
                         throw new IllegalArgumentException(String.format("第%d道题目（题型: %d）需要提供选项(options/opinions字段)", questionIndex, questionType));
                     }
@@ -307,5 +312,31 @@ public class ExamServiceImpl extends ServiceImpl<ExamMapper,Exam> implements IEx
     @Override
     public void completeExamEdit(Long examId, Long creatorId) {
         // TODO: 实现完成试卷编辑验证逻辑
+    }
+
+    /**
+     * 获取成绩基本信息
+     * @param examId 考试ID
+     * @return Map
+     */
+    public Map<String, Object> getBasicStats(Long examId) {
+        return testerExamMapper.getBasicStats(examId);
+    }
+
+    /**
+     * 分数段统计
+     * @param examId 考试ID
+     * @return List
+     */
+    public List<Map<String, Object>> getScoreRanges(Long examId) {
+        List<Map<String, Integer>> ranges = List.of(
+                Map.of("start", 0, "end", 59),
+                Map.of("start", 60, "end", 69),
+                Map.of("start", 70, "end", 79),
+                Map.of("start", 80, "end", 89),
+                Map.of("start", 90, "end", 100)
+        );
+
+        return testerExamMapper.getScoreRanges(examId, ranges);
     }
 }

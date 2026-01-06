@@ -3,6 +3,7 @@ package org.example.examsystem.mapper;
 import com.baomidou.mybatisplus.core.mapper.BaseMapper;
 import org.apache.ibatis.annotations.Insert;
 import org.apache.ibatis.annotations.Param;
+import org.example.examsystem.dto.QuestionAnswerDTO;
 import org.example.examsystem.entity.Question;
 import org.example.examsystem.vo.QuestionSimpleInfoVO;
 
@@ -15,5 +16,8 @@ public interface QuestionMapper extends BaseMapper<Question> {
     void associateQuestionWithExam(@Param("questionId") Long questionId,
                                    @Param("examId") Long examId,
                                    @Param("score") Integer score);
+
+
+        List<QuestionAnswerDTO> selectQuestionsWithAnswer(@Param("examId") Long examId);
 }
 

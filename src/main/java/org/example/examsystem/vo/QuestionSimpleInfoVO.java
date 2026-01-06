@@ -1,6 +1,7 @@
 package org.example.examsystem.vo;
 
 import com.fasterxml.jackson.annotation.JsonProperty;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import lombok.Data;
 
 import java.util.List;
@@ -15,6 +16,8 @@ public class QuestionSimpleInfoVO {
     private String content;
     private Double score;
 
+    @JsonInclude(JsonInclude.Include.NON_NULL)
+    private Object userAnswer;
     // 如果是选择题 -- 选项VO链表
     private List<OptionVO> options;
 

@@ -21,4 +21,6 @@ public class TesterExamInfoVO {
     private Integer totalScore;     // 学生总分
     private LocalDateTime testerStartTime;   // 学生开始考试时间
     private LocalDateTime testerSubmitTime;  // 学生提交考试时间
+    private Integer paperShow;
+    private Integer reviewStatus;
 }

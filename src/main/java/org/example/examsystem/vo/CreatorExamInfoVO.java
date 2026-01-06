@@ -20,8 +20,8 @@ public class CreatorExamInfoVO {
     private Integer showAnswer;
     private Date createTime;
     private Date updateTime;
+    private Integer examCode;
 
     private List<QuestionDetailVO> questionDetailVOList;
 
-    private List<UserSimpleInfoVO> userSimpleInfoVOList;
 }

@@ -29,7 +29,24 @@
                e.start_time AS examStartTime,
                e.end_time AS examEndTime,
                e.limit_minutes,
-               e.status AS examStatus
+               CASE
+                   WHEN NOW() &lt; e.start_time THEN 0
+                   WHEN NOW() BETWEEN e.start_time AND e.end_time THEN 1
+                   ELSE 2
+                   END AS examStatus,
+              e.paper_show AS paperShow,
+               (CASE
+                    WHEN EXISTS (
+                        SELECT 1
+                        FROM answer_record ar
+                                 JOIN question q ON ar.question_id = q.id
+                        WHERE ar.student_exam_id = te.id
+                          AND q.question_type = 5
+                          AND ar.is_reviewed = 0
+                          AND ar.is_deleted = 0
+                    ) THEN 0 -- 存在未批阅的主观题，返回 0
+                    ELSE 1   -- 不存在未批阅的主观题（全批了或没主观题），返回 1
+                   END) AS reviewStatus
         FROM tester_exam te
                  JOIN exam e ON te.exam_id = e.id
         WHERE te.student_id = #{userId} AND te.is_deleted = 0 AND e.is_deleted = 0
@@ -43,10 +60,15 @@
                start_time ,
                end_time ,
                limit_minutes,
-               status ,
+               CASE
+                   WHEN NOW() &lt; exam.start_time THEN 0
+                   WHEN NOW() BETWEEN exam.start_time AND exam.end_time THEN 1
+                   ELSE 2
+                   END AS status,
                create_time,
                update_time,
-               paper_show AS showAnswer
+               paper_show AS showAnswer,
+               exam_code as examCode
         FROM exam
         WHERE creator_id = #{userId} AND is_deleted = 0
     </select>
@@ -79,7 +101,21 @@
         SELECT
             u.id AS userId,
             u.real_name AS realName,
-            te.total_score AS score
+            te.total_score AS score,
+            u.email AS email,
+            te.submit_time AS submitTime,
+            (CASE
+                 WHEN EXISTS (
+                     SELECT 1
+                     FROM answer_record ar
+                              JOIN question q ON ar.question_id = q.id
+                     WHERE ar.student_exam_id = te.id
+                       AND q.question_type = 5
+                       AND ar.is_reviewed = 0
+                       AND ar.is_deleted = 0
+                 ) THEN 0 -- 存在未批阅的主观题，返回 0
+                 ELSE 1   -- 不存在未批阅的主观题（全批了或没主观题），返回 1
+                END) AS status
         FROM tester_exam te
                  JOIN user u ON te.student_id = u.id
         WHERE te.exam_id = #{examId}
@@ -87,6 +123,41 @@
           AND u.is_deleted = 0
         ORDER BY te.total_score DESC
     </select>
+
+    <select id="getBasicStats" resultType="map">
+        SELECT
+            AVG(te.total_score) AS averageScore,
+            MAX(te.total_score) AS highestScore,
+            MIN(te.total_score) AS lowestScore,
+            SUM(CASE WHEN te.total_score >= 60 THEN 1 ELSE 0 END) * 1.0 / COUNT(*) AS passRate
+        FROM tester_exam te
+        WHERE te.exam_id = #{examId}
+          AND te.is_deleted = 0
+          AND te.status = 2  -- 已提交的才算
+    </select>
+
+    <select id="getScoreRanges" resultType="map">
+        <foreach collection="ranges" item="r" separator="UNION ALL">
+            SELECT
+            #{r.start} AS rangeStart,
+            #{r.end} AS rangeEnd,
+            SUM(CASE WHEN te.total_score BETWEEN #{r.start} AND #{r.end}
+            THEN 1 ELSE 0 END) AS count,
+            SUM(CASE WHEN te.total_score BETWEEN #{r.start} AND #{r.end}
+            THEN 1 ELSE 0 END) * 1.0 /
+            (SELECT COUNT(*) FROM tester_exam
+            WHERE exam_id = #{examId}
+            AND is_deleted = 0
+            AND status = 2
+            ) AS percentage
+            FROM tester_exam te
+            WHERE te.exam_id = #{examId}
+            AND te.is_deleted = 0
+            AND te.status = 2
+        </foreach>
+    </select>
+
+
 
 
 </mapper>
