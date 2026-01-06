@@ -156,7 +156,7 @@ public class ExamPaperServiceImpl extends ServiceImpl<AnswerRecordMapper, Answer
             // 暂存：使用Hash存储，方便快速查找（key: exam:auto:save:{examId}:{userId}）
             String hashKey = "exam:auto:save:" + dto.getExamId() + ":" + testerExam.getStudentId();
             redisTemplate.opsForValue()
-                    .set(hashKey, JSONUtil.toJsonStr(msg), Duration.ofHours(2)); // 暂存数据保留7天
+                    .set(hashKey, JSONUtil.toJsonStr(msg), Duration.ofHours(2)); // 暂存数据保留2h
         }
     }
 
@@ -166,9 +166,10 @@ public class ExamPaperServiceImpl extends ServiceImpl<AnswerRecordMapper, Answer
      * @param userId 用户ID
      */
     public void autoSaveExam(ExamSubmitDTO dto, Long userId) {
-
+        //System.out.println("DTO:"+JSONUtil.toJsonStr(dto));
         Long examId;
         examId = dto.getExamId();
+        System.out.println("examID:"+examId);
         // 效验考试状态
         TesterExam testerExam = testerExamMapper.selectOne(
                 new LambdaQueryWrapper<TesterExam>()
@@ -176,6 +177,7 @@ public class ExamPaperServiceImpl extends ServiceImpl<AnswerRecordMapper, Answer
                         .eq(TesterExam::getStudentId,userId)
         );
         if (testerExam == null||!testerExam.getStatus().equals(1)) {
+            System.out.println(testerExam);
             throw new RuntimeException("考试状态异常，请联系管理员");
         }
         // 允许反复覆盖
@@ -231,12 +233,15 @@ public class ExamPaperServiceImpl extends ServiceImpl<AnswerRecordMapper, Answer
      */
     public void submitExam(ExamSubmitDTO dto,Long userId) {
         Long examId = dto.getExamId();
+        // System.out.println("DTO:"+JSONUtil.toJsonStr(dto));
+
          // 效验考试状态
         TesterExam testerExam = testerExamMapper.selectOne(
                 new LambdaQueryWrapper<TesterExam>()
                         .eq(TesterExam::getExamId,examId)
                         .eq(TesterExam::getStudentId,userId)
         );
+
         if (testerExam == null||!testerExam.getStatus().equals(1)) {
             throw new RuntimeException("考试状态异常，请联系管理员");
         }

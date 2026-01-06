@@ -16,7 +16,7 @@ public class QuestionSimpleInfoVO {
     private Double score;
 
     @JsonInclude(JsonInclude.Include.NON_NULL)
-    private Object answer;
+    private Object userAnswer;
     // 如果是选择题 -- 选项VO链表
     private List<OptionVO> options;
 }

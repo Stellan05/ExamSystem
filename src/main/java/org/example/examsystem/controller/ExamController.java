@@ -2,6 +2,7 @@ package org.example.examsystem.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.ibatis.annotations.Param;
 import org.example.examsystem.dto.AbnormalBehaviorDTO;
@@ -32,6 +33,7 @@ import java.util.Map;
 /**
  * 考试相关模块controller
  */
+@Slf4j
 @RestController
 @RequestMapping("/exam")
 @RequiredArgsConstructor
@@ -142,11 +144,19 @@ public class ExamController {
         BeanUtils.copyProperties(exam,examSimpleInfoVO);
         BeanUtils.copyProperties(creator,examSimpleInfoVO);
         examSimpleInfoVO.setExamId(exam.getId());
+        TesterExam testerExam = testerExamMapper.selectOne(
+                new LambdaQueryWrapper<TesterExam>().eq(TesterExam::getExamId, exam.getId())
+                        .eq(TesterExam::getStudentId, 3L)
+        );
+
         int status;
         if(LocalDateTime.now().isBefore(exam.getStartTime()))
             status=0;
+        else if(testerExam.getStatus()==2)
+            status=2;
         else
             status=1;
+
         examSimpleInfoVO.setStatus(status);
         return Result.ok(examSimpleInfoVO);
     }
@@ -158,23 +168,24 @@ public class ExamController {
      * @return 题目链表
      */
     @Transactional
-    @PostMapping("/{examId}/start")
+    @GetMapping("/{examId}/start")
     public Result  startExam(
             @PathVariable("examId") Long examId,
-            @RequestParam("userId")  Long userId
+            @RequestParam(value = "userId",required = false)  Long userId
     ){
+
         // 首先先插考试记录，看考生是首次还是多次进入考试
         TesterExam testerExam = testerExamMapper.selectOne(
                 new LambdaQueryWrapper<TesterExam>()
                         .eq(TesterExam::getExamId, examId)
-                        .eq(TesterExam::getStudentId, userId)
+                        .eq(TesterExam::getStudentId, 3L)
         );
         Map<Long, Object> answerMap = new HashMap<>();
 
         if (testerExam != null) {
             System.out.println("非首次");
             // 非首次进入，取暂存
-            ExamSubmitDTO autoSave = examPaperService.getAutoSaveExam(examId, userId);
+            ExamSubmitDTO autoSave = examPaperService.getAutoSaveExam(examId, 3L);
             if (autoSave != null && autoSave.getAnswers() != null) {
                 for (AnswerDTO a : autoSave.getAnswers()) {
                     answerMap.put(a.getQuestionId(), a.getAnswer());
@@ -199,7 +210,7 @@ public class ExamController {
         List<QuestionSimpleInfoVO> questions = examService.getQuestions(examId);
         for (QuestionSimpleInfoVO q : questions) {
             if (answerMap.containsKey(q.getQuestionId())) {
-                q.setAnswer(answerMap.get(q.getQuestionId()));
+                q.setUserAnswer(answerMap.get(q.getQuestionId()));
             }
         }
 
@@ -283,11 +294,13 @@ public class ExamController {
      */
     @PostMapping("/auto-save")
     public Result autoSaveExam(@RequestBody ExamSubmitDTO dto,
-                               @RequestParam("userId") Long userId) {
+                               @RequestParam(value = "userId",required = false) Long userId) {
         try {
-            examPaperService.autoSaveExam(dto, userId);
+            examPaperService.autoSaveExam(dto, 3L);
+            log.info("暂存成功");
             return Result.ok("暂存成功");
         } catch (RuntimeException e) {
+            log.warn("暂存失败");
             return Result.fail(e.getMessage());
         }
     }
@@ -300,7 +313,7 @@ public class ExamController {
      */
     @GetMapping("/auto-save/{examId}")
     public Result getAutoSaveExam(@PathVariable("examId") Long examId,
-                                  @RequestParam("userId") Long userId) {
+                                  @RequestParam(value = "userId",required = false) Long userId) {
         try {
             ExamSubmitDTO dto = examPaperService.getAutoSaveExam(examId, userId);
             if (dto == null) {
