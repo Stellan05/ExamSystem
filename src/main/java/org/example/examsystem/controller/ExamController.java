@@ -26,6 +26,7 @@ import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
 import java.time.LocalDateTime;
+import java.time.ZoneId;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -103,8 +104,9 @@ public class ExamController {
     @GetMapping("my-exam/details/{examId}")
     public Result getMyExamDetails(
             @PathVariable("examId") Long examId,
-            @RequestParam Long userId
+            @RequestParam(required = false) Long userId
     ){
+         userId = 3L;
         TesterExam testerExam = testerExamMapper.selectOne(
                 new LambdaQueryWrapper<TesterExam>()
                         .eq(TesterExam::getExamId, examId)
@@ -146,16 +148,16 @@ public class ExamController {
         examSimpleInfoVO.setExamId(exam.getId());
         TesterExam testerExam = testerExamMapper.selectOne(
                 new LambdaQueryWrapper<TesterExam>().eq(TesterExam::getExamId, exam.getId())
-                        .eq(TesterExam::getStudentId, 3L)
+                        .eq(TesterExam::getStudentId, 1L)
         );
 
         int status;
         if(LocalDateTime.now().isBefore(exam.getStartTime()))
             status=0;
-        else if(testerExam.getStatus()==2)
-            status=2;
-        else
+        else if(testerExam==null||testerExam.getStatus()==1)
             status=1;
+        else
+            status=2;
 
         examSimpleInfoVO.setStatus(status);
         return Result.ok(examSimpleInfoVO);
@@ -173,19 +175,19 @@ public class ExamController {
             @PathVariable("examId") Long examId,
             @RequestParam(value = "userId",required = false)  Long userId
     ){
-
+        userId = 1L;
         // 首先先插考试记录，看考生是首次还是多次进入考试
         TesterExam testerExam = testerExamMapper.selectOne(
                 new LambdaQueryWrapper<TesterExam>()
                         .eq(TesterExam::getExamId, examId)
-                        .eq(TesterExam::getStudentId, 3L)
+                        .eq(TesterExam::getStudentId, userId)
         );
         Map<Long, Object> answerMap = new HashMap<>();
 
         if (testerExam != null) {
             System.out.println("非首次");
             // 非首次进入，取暂存
-            ExamSubmitDTO autoSave = examPaperService.getAutoSaveExam(examId, 3L);
+            ExamSubmitDTO autoSave = examPaperService.getAutoSaveExam(examId, userId);
             if (autoSave != null && autoSave.getAnswers() != null) {
                 for (AnswerDTO a : autoSave.getAnswers()) {
                     answerMap.put(a.getQuestionId(), a.getAnswer());
@@ -281,7 +283,8 @@ public class ExamController {
     @PostMapping("/submit/paper")
     public Result submitPaper( @RequestBody ExamSubmitDTO dto){
         // 先调用存Redis接口
-        examPaperService.submitExam(dto,3L);
+
+        examPaperService.submitExam(dto,1L);
         return Result.ok("交卷成功");
         // 之后交给定时任务
     }
@@ -296,7 +299,8 @@ public class ExamController {
     public Result autoSaveExam(@RequestBody ExamSubmitDTO dto,
                                @RequestParam(value = "userId",required = false) Long userId) {
         try {
-            examPaperService.autoSaveExam(dto, 3L);
+            userId = 1L;
+            examPaperService.autoSaveExam(dto, userId);
             log.info("暂存成功");
             return Result.ok("暂存成功");
         } catch (RuntimeException e) {
@@ -315,10 +319,19 @@ public class ExamController {
     public Result getAutoSaveExam(@PathVariable("examId") Long examId,
                                   @RequestParam(value = "userId",required = false) Long userId) {
         try {
+            TesterExam testerExam = testerExamMapper.selectOne(
+                    new LambdaQueryWrapper<TesterExam>().eq(TesterExam::getExamId, examId)
+                    .eq(TesterExam::getStudentId, userId)
+            );
             ExamSubmitDTO dto = examPaperService.getAutoSaveExam(examId, userId);
+
             if (dto == null) {
                 return Result.info(404, "暂无暂存数据");
             }
+
+            LocalDateTime startTime=testerExam.getStartTime();
+            long milli = startTime.atZone(ZoneId.systemDefault()).toInstant().toEpochMilli();
+            dto.setStartTime(milli);
             return Result.ok(dto);
         } catch (RuntimeException e) {
             return Result.fail(e.getMessage());
