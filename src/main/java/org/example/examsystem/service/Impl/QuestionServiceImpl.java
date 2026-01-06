@@ -12,7 +12,6 @@ import org.example.examsystem.mapper.QuestionAnswerMapper;
 import org.example.examsystem.mapper.QuestionMapper;
 import org.example.examsystem.mapper.QuestionOptionMapper;
 import org.example.examsystem.service.IService.IQuestionService;
-import org.example.examsystem.vo.Result;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
@@ -31,32 +30,32 @@ public class QuestionServiceImpl implements IQuestionService {
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Result createQuestion(CreateQuestionRequest request) {
+    public Long createQuestion(CreateQuestionRequest request) {
         if (request.getCreatorId() == null) {
-            return Result.fail("出题人ID不能为空");
+            throw new IllegalArgumentException("出题人ID不能为空");
         }
         if (!StringUtils.hasText(request.getQuestionType())) {
-            return Result.fail("题型不能为空");
+            throw new IllegalArgumentException("题型不能为空");
         }
         if (!StringUtils.hasText(request.getContent())) {
-            return Result.fail("题干不能为空");
+            throw new IllegalArgumentException("题干不能为空");
         }
 
         int questionType;
         try {
             questionType = Integer.parseInt(request.getQuestionType());
         } catch (NumberFormatException ex) {
-            return Result.fail("题型必须是数字：1单选 2多选 3判断 4填空 5主观");
+            throw new IllegalArgumentException("题型必须是数字：1单选 2多选 3判断 4填空 5主观");
         }
         if (questionType < 1 || questionType > 5) {
-            return Result.fail("题型必须是1-5之间的数字");
+            throw new IllegalArgumentException("题型必须是1-5之间的数字");
         }
 
         // 解析选项（仅选择/判断题需要）
         List<String> optionList = new ArrayList<>();
         if (questionType == 1 || questionType == 2 || questionType == 3) {
             if (!StringUtils.hasText(request.getOptions())) {
-                return Result.fail("选择/判断题需要提供选项");
+                throw new IllegalArgumentException("选择/判断题需要提供选项");
             }
             String[] parts = request.getOptions().split("[,\\n]");
             for (String p : parts) {
@@ -65,7 +64,7 @@ public class QuestionServiceImpl implements IQuestionService {
                 }
             }
             if (optionList.isEmpty()) {
-                return Result.fail("选项不能为空");
+                throw new IllegalArgumentException("选项不能为空");
             }
         }
 
@@ -89,22 +88,22 @@ public class QuestionServiceImpl implements IQuestionService {
             }
         }
 
-        return Result.ok(question.getId());
+        return question.getId();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Result setQuestionAnswer(Long questionId, SetQuestionAnswerRequest request) {
+    public void setQuestionAnswer(Long questionId, SetQuestionAnswerRequest request) {
         if (questionId == null) {
-            return Result.fail("题目ID不能为空");
+            throw new IllegalArgumentException("题目ID不能为空");
         }
         if (!StringUtils.hasText(request.getCorrectAnswer())) {
-            return Result.fail("标准答案不能为空");
+            throw new IllegalArgumentException("标准答案不能为空");
         }
 
         Question question = questionMapper.selectById(questionId);
         if (question == null || (question.getIsDeleted() != null && question.getIsDeleted() == 1)) {
-            return Result.info(404, "题目不存在");
+            throw new IllegalArgumentException("题目不存在");
         }
 
         // 查询是否已有答案记录，存在则更新，否则插入
@@ -121,21 +120,19 @@ public class QuestionServiceImpl implements IQuestionService {
         } else {
             questionAnswerMapper.updateById(qa);
         }
-        return Result.ok();
     }
 
     @Override
     @Transactional(rollbackFor = Exception.class)
-    public Result deleteQuestion(Long questionId) {
+    public void deleteQuestion(Long questionId) {
         if (questionId == null) {
-            return Result.fail("题目ID不能为空");
+            throw new IllegalArgumentException("题目ID不能为空");
         }
         Question question = questionMapper.selectById(questionId);
         if (question == null || (question.getIsDeleted() != null && question.getIsDeleted() == 1)) {
-            return Result.info(404, "题目不存在");
+            throw new IllegalArgumentException("题目不存在");
         }
         questionMapper.deleteById(questionId);
-        return Result.ok();
     }
 
     @Override

@@ -4,7 +4,6 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
-import org.example.examsystem.vo.Result;
 import org.example.examsystem.mapper.WrongQuestionMapper;
 import org.example.examsystem.service.IService.IWrongQuestionService;
 import org.example.examsystem.vo.WrongQuestionVO;
@@ -21,18 +20,18 @@ public class WrongQuestionServiceImp extends ServiceImpl<WrongQuestionMapper, Wr
     /**
      * 按照错题时间查询错题列表
      * @param studentId 学生Id
-     * @return Result
+     * @return 错题列表，如果为空返回null
      */
     @Override
-    public Result getWrongQuestions(Long studentId) {
+    public List<WrongQuestionVO> getWrongQuestions(Long studentId) {
         List<WrongQuestionVO> wrongQuestions = query()
                 .eq("student_id", studentId)
                 .orderByAsc("create_time")
                 .list();
-        if(wrongQuestions==null|| wrongQuestions.isEmpty()){
-            return Result.ok("你的错题已经全部解决！！");
+        if(wrongQuestions == null || wrongQuestions.isEmpty()){
+            return null;
         }
-            return Result.ok(wrongQuestions);
+        return wrongQuestions;
     }
 
     /**

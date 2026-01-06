@@ -4,15 +4,24 @@ import com.baomidou.mybatisplus.core.toolkit.Wrappers;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
+import org.example.examsystem.dto.CreateExamRequest;
+import org.example.examsystem.dto.QuestionInExamDTO;
+import org.example.examsystem.dto.UpdateExamBasicInfoRequest;
 import org.example.examsystem.entity.Exam;
 import org.example.examsystem.entity.TesterExam;
-import org.example.examsystem.dto.CreateExamRequest;
+import org.example.examsystem.entity.Question;
+import org.example.examsystem.entity.QuestionOption;
+import org.example.examsystem.entity.QuestionAnswer;
+import org.example.examsystem.entity.ExamQuestion;
 import org.example.examsystem.mapper.*;
 import org.example.examsystem.service.IService.IExamService;
 import org.example.examsystem.vo.*;
 import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
 import org.springframework.util.StringUtils;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.HashMap;
 import java.util.Map;
@@ -20,6 +29,7 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 
+@Slf4j
 @Service
 @RequiredArgsConstructor
 public class ExamServiceImpl extends ServiceImpl<ExamMapper,Exam> implements IExamService {
@@ -28,6 +38,9 @@ public class ExamServiceImpl extends ServiceImpl<ExamMapper,Exam> implements IEx
     private final TesterExamMapper testerExamMapper;
     private final AnswerRecordMapper answerRecordMapper;
     private final QuestionMapper questionMapper;
+    private final QuestionAnswerMapper questionAnswerMapper;
+    private final QuestionOptionMapper questionOptionMapper;
+    private final ExamQuestionMapper examQuestionMapper;
 
     /**
      * 用户获取自己 参加过的考试
@@ -109,34 +122,35 @@ public class ExamServiceImpl extends ServiceImpl<ExamMapper,Exam> implements IEx
      * 创建考试并绑定题目
      */
     @Override
-    public Result createExam(CreateExamRequest request) {
+    @Transactional(rollbackFor = Exception.class)
+    public Map<String, Object> createExam(CreateExamRequest request) {
         if (!StringUtils.hasText(request.getExamName())) {
-            return Result.fail("考试名称不能为空");
+            throw new IllegalArgumentException("考试名称不能为空");
         }
         if (!StringUtils.hasText(request.getExamCode())) {
-            return Result.fail("考试码不能为空");
+            throw new IllegalArgumentException("考试码不能为空");
         }
         if (request.getCreatorId() == null) {
-            return Result.fail("创建者ID不能为空");
+            throw new IllegalArgumentException("创建者ID不能为空");
         }
         if (request.getDuration() == null || request.getDuration() <= 0) {
-            return Result.fail("考试时长必须大于0");
+            throw new IllegalArgumentException("考试时长必须大于0");
         }
         Integer examCodeInt;
         try {
             examCodeInt = Integer.valueOf(request.getExamCode());
         } catch (NumberFormatException ex) {
-            return Result.fail("考试码必须为六位数字");
+            throw new IllegalArgumentException("考试码必须为六位数字");
         }
         if (request.getExamCode().length() != 6) {
-            return Result.fail("考试码必须为六位数字");
+            throw new IllegalArgumentException("考试码必须为六位数字");
         }
 
         LocalDateTime start;
         try {
             start = LocalDateTime.of(LocalDate.parse(request.getStartDate()), LocalTime.parse(request.getStartTime()));
         } catch (Exception ex) {
-            return Result.fail("开始时间格式错误，应为 yyyy-MM-dd 与 HH:mm:ss");
+            throw new IllegalArgumentException("开始时间格式错误，应为 yyyy-MM-dd 与 HH:mm:ss");
         }
 
         // 唯一性：考试码不能重复
@@ -144,9 +158,10 @@ public class ExamServiceImpl extends ServiceImpl<ExamMapper,Exam> implements IEx
                 .eq(Exam::getExamCode, examCodeInt)
                 .eq(Exam::getIsDeleted, 0));
         if (exists != null && exists > 0) {
-            return Result.info(409, "考试码已存在");
+            throw new IllegalArgumentException("考试码已存在");
         }
 
+        // 创建试卷
         Exam exam = new Exam();
         exam.setExamName(request.getExamName());
         exam.setExamCode(examCodeInt);
@@ -159,9 +174,138 @@ public class ExamServiceImpl extends ServiceImpl<ExamMapper,Exam> implements IEx
         exam.setStatus(0);
         examMapper.insert(exam);
 
+        Long examId = exam.getId();
+
+        // 如果提供了题目列表，则创建所有题目
+        if (request.getQuestions() != null && !request.getQuestions().isEmpty()) {
+            int sort = 1;
+            for (int i = 0; i < request.getQuestions().size(); i++) {
+                QuestionInExamDTO questionDTO = request.getQuestions().get(i);
+                int questionIndex = i + 1;
+                
+                // 验证题目信息
+                if (questionDTO.getQuestionType() == null || questionDTO.getQuestionType().trim().isEmpty()) {
+                    throw new IllegalArgumentException(String.format("第%d道题目的题型(questionType)不能为空", questionIndex));
+                }
+                if (!StringUtils.hasText(questionDTO.getContent())) {
+                    throw new IllegalArgumentException(String.format("第%d道题目的题干(content)不能为空", questionIndex));
+                }
+                if (questionDTO.getScore() == null || questionDTO.getScore() <= 0) {
+                    throw new IllegalArgumentException(String.format("第%d道题目的分数(score)必须大于0", questionIndex));
+                }
+                
+                // 调试日志：检查 options 字段
+                log.info("第{}道题目 - options值: {}, 是否为null: {}, 是否为空: {}", 
+                    questionIndex, 
+                    questionDTO.getOptions(), 
+                    questionDTO.getOptions() == null,
+                    questionDTO.getOptions() != null && questionDTO.getOptions().isEmpty());
+
+                // 转换题型：支持字符串和数字两种格式
+                int questionType;
+                String typeStr = questionDTO.getQuestionType().trim().toLowerCase();
+                try {
+                    // 先尝试作为数字解析
+                    questionType = Integer.parseInt(typeStr);
+                } catch (NumberFormatException ex) {
+                    // 如果不是数字，尝试字符串映射
+                    switch (typeStr) {
+                        case "single":
+                        case "单选题":
+                            questionType = 1;
+                            break;
+                        case "multiple":
+                        case "多选题":
+                            questionType = 2;
+                            break;
+                        case "judge":
+                        case "判断题":
+                            questionType = 3;
+                            break;
+                        case "fill":
+                        case "填空题":
+                            questionType = 4;
+                            break;
+                        case "essay":
+                        case "简答题":
+                        case "主观题":
+                            questionType = 5;
+                            break;
+                        default:
+                            throw new IllegalArgumentException(String.format("第%d道题目的题型不支持，支持的类型：single/multiple/judge/fill/essay 或 1/2/3/4/5", questionIndex));
+                    }
+                }
+                if (questionType < 1 || questionType > 5) {
+                    throw new IllegalArgumentException(String.format("第%d道题目的题型必须在1-5之间", questionIndex));
+                }
+
+                // 创建题目实体
+                Question question = new Question();
+                question.setQuestionType(questionType);
+                question.setContent(questionDTO.getContent());
+                question.setCreatorId(request.getCreatorId());
+                questionMapper.insert(question);
+                Long questionId = question.getId();
+
+                // 创建选项（仅选择/判断题需要）- 直接使用 List<String>
+                if (questionType == 1 || questionType == 2) {
+                    List<String> optionsList = questionDTO.getOptions();
+                    log.info("第{}道题目 - 题型: {}, options: {}, 是否为null: {}", 
+                        questionIndex, questionType, optionsList, optionsList == null);
+                    
+                    if (optionsList == null || optionsList.isEmpty()) {
+                        throw new IllegalArgumentException(String.format("第%d道题目（题型: %d）需要提供选项(options/opinions字段)", questionIndex, questionType));
+                    }
+                    char key = 'A';
+                    for (String opt : questionDTO.getOptions()) {
+                        if (StringUtils.hasText(opt)) {
+                            QuestionOption qo = new QuestionOption();
+                            qo.setQuestionId(questionId);
+                            qo.setOptionKey(String.valueOf(key));
+                            qo.setOptionText(opt.trim());
+                            questionOptionMapper.insert(qo);
+                            key++;
+                        }
+                    }
+                }
+
+                // 设置标准答案（如果有）
+                if (StringUtils.hasText(questionDTO.getAnswer())) {
+                    QuestionAnswer qa = new QuestionAnswer();
+                    qa.setQuestionId(questionId);
+                    qa.setCorrectAnswer(questionDTO.getAnswer());
+                    qa.setAnswerAnalysis(questionDTO.getAnswerAnalysis());
+                    questionAnswerMapper.insert(qa);
+                }
+
+                // 关联题目到试卷
+                ExamQuestion examQuestion = new ExamQuestion();
+                examQuestion.setExamId(examId);
+                examQuestion.setQuestionId(questionId);
+                examQuestion.setScore(questionDTO.getScore());
+                examQuestion.setSort(sort++);
+                examQuestion.setIsDeleted(0);
+                examQuestionMapper.insert(examQuestion);
+            }
+        }
+
+        // 获取该试卷的题目列表（包含刚创建的题目）
+        List<QuestionSimpleInfoVO> questions = questionMapper.getQuestions(examId);
+
         Map<String, Object> data = new HashMap<>();
-        data.put("examId", exam.getId());
+        data.put("examId", examId);
         data.put("examCode", exam.getExamCode());
-        return Result.ok(data);
+        data.put("questions", questions);
+        return data;
+    }
+
+    @Override
+    public void updateExamBasicInfo(Long examId, Long creatorId, UpdateExamBasicInfoRequest request) {
+        // TODO: 实现更新考试基本信息逻辑
+    }
+
+    @Override
+    public void completeExamEdit(Long examId, Long creatorId) {
+        // TODO: 实现完成试卷编辑验证逻辑
     }
 }

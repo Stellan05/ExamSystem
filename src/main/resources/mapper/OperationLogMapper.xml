@@ -1,0 +1,138 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE mapper
+        PUBLIC "-//mybatis.org//DTD Mapper 3.0//EN"
+        "http://mybatis.org/dtd/mybatis-3-mapper.dtd">
+<mapper namespace="org.example.examsystem.mapper.OperationLogMapper">
+
+    <!-- 查询操作日志列表 -->
+    <select id="getOperationLogs" resultType="org.example.examsystem.entity.OperationLog">
+        SELECT
+            id,
+            user_id AS userId,
+            username,
+            module,
+            operation_type AS operationType,
+            description,
+            request_method AS requestMethod,
+            request_url AS requestUrl,
+            request_params AS requestParams,
+            response_result AS responseResult,
+            ip_address AS ipAddress,
+            status,
+            error_message AS errorMessage,
+            duration,
+            create_time AS createTime,
+            update_time AS updateTime
+        FROM operation_log
+        WHERE is_deleted = 0
+        <if test="params.userId != null">
+            AND user_id = #{params.userId}
+        </if>
+        <if test="params.module != null and params.module != ''">
+            AND module LIKE CONCAT('%', #{params.module}, '%')
+        </if>
+        <if test="params.operationType != null and params.operationType != ''">
+            AND operation_type = #{params.operationType}
+        </if>
+        <if test="params.status != null">
+            AND status = #{params.status}
+        </if>
+        <if test="params.startTime != null and params.startTime != ''">
+            AND create_time >= #{params.startTime}
+        </if>
+        <if test="params.endTime != null and params.endTime != ''">
+            AND create_time &lt;= #{params.endTime}
+        </if>
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 搜索操作日志 -->
+    <select id="searchOperationLogs" resultType="org.example.examsystem.entity.OperationLog">
+        SELECT
+            id,
+            user_id AS userId,
+            username,
+            module,
+            operation_type AS operationType,
+            description,
+            request_method AS requestMethod,
+            request_url AS requestUrl,
+            request_params AS requestParams,
+            response_result AS responseResult,
+            ip_address AS ipAddress,
+            status,
+            error_message AS errorMessage,
+            duration,
+            create_time AS createTime,
+            update_time AS updateTime
+        FROM operation_log
+        WHERE is_deleted = 0
+        <if test="params.keyword != null and params.keyword != ''">
+            AND (
+                username LIKE CONCAT('%', #{params.keyword}, '%')
+                OR description LIKE CONCAT('%', #{params.keyword}, '%')
+                OR module LIKE CONCAT('%', #{params.keyword}, '%')
+            )
+        </if>
+        <if test="params.startDate != null and params.startDate != ''">
+            AND DATE(create_time) >= #{params.startDate}
+        </if>
+        <if test="params.endDate != null and params.endDate != ''">
+            AND DATE(create_time) &lt;= #{params.endDate}
+        </if>
+        <if test="params.module != null and params.module != ''">
+            AND module LIKE CONCAT('%', #{params.module}, '%')
+        </if>
+        <if test="params.operationType != null and params.operationType != ''">
+            AND operation_type = #{params.operationType}
+        </if>
+        ORDER BY create_time DESC
+    </select>
+
+    <!-- 导出操作日志 -->
+    <select id="exportOperationLogs" resultType="org.example.examsystem.entity.OperationLog">
+        SELECT
+            id,
+            user_id AS userId,
+            username,
+            module,
+            operation_type AS operationType,
+            description,
+            request_method AS requestMethod,
+            request_url AS requestUrl,
+            request_params AS requestParams,
+            response_result AS responseResult,
+            ip_address AS ipAddress,
+            status,
+            error_message AS errorMessage,
+            duration,
+            create_time AS createTime,
+            update_time AS updateTime
+        FROM operation_log
+        WHERE is_deleted = 0
+        <if test="params.userId != null">
+            AND user_id = #{params.userId}
+        </if>
+        <if test="params.module != null and params.module != ''">
+            AND module LIKE CONCAT('%', #{params.module}, '%')
+        </if>
+        <if test="params.operationType != null and params.operationType != ''">
+            AND operation_type = #{params.operationType}
+        </if>
+        <if test="params.status != null">
+            AND status = #{params.status}
+        </if>
+        <if test="params.startTime != null and params.startTime != ''">
+            AND create_time >= #{params.startTime}
+        </if>
+        <if test="params.endTime != null and params.endTime != ''">
+            AND create_time &lt;= #{params.endTime}
+        </if>
+        ORDER BY create_time DESC
+        LIMIT 10000
+    </select>
+
+</mapper>
+
+
+

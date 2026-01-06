@@ -21,7 +21,7 @@ public class RegisterRequest {
     
     private String realName;
     
-    private Integer role; // 可选，默认普通用户 1，如果为 null 则设置为 1
+    private Integer role; // 注册时忽略此字段，所有注册用户默认为 role=1（用户），管理员需通过其他方式创建
     
     @JsonProperty("verificationCode")
     private String verificationCode;

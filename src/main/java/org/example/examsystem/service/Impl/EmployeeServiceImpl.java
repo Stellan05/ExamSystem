@@ -10,7 +10,6 @@ import org.example.examsystem.utils.MailService;
 import org.example.examsystem.utils.VerificationCodeService;
 import org.example.examsystem.vo.EmployeeLoginVO;
 import org.example.examsystem.vo.RegisterResponseVO;
-import org.example.examsystem.vo.Result;
 import org.example.examsystem.vo.SendCodeResponseVO;
 import org.springframework.stereotype.Service;
 import org.springframework.util.StringUtils;
@@ -27,7 +26,7 @@ public class EmployeeServiceImpl implements EmployeeService {
     private final VerificationCodeService verificationCodeService;
 
     @Override
-    public Result login(String username, String password) {
+    public EmployeeLoginVO login(String username, String password) {
         User user = userMapper.selectOne(
                 Wrappers.<User>lambdaQuery()
                         .eq(User::getEmail, username)
@@ -35,7 +34,7 @@ public class EmployeeServiceImpl implements EmployeeService {
                         .eq(User::getIsDeleted, 0)
         );
         if (user == null) {
-            return Result.info(401, "用户名或密码错误");
+            throw new IllegalArgumentException("用户名或密码错误");
         }
 
         Map<String, Object> claims = new HashMap<>();
@@ -50,19 +49,19 @@ public class EmployeeServiceImpl implements EmployeeService {
         vo.setUserName(user.getEmail());
         vo.setToken(token);
 
-        return Result.ok(vo);
+        return vo;
     }
 
     @Override
-    public Result register(String email, String password, String realName, Integer role, String verificationCode) {
+    public RegisterResponseVO register(String email, String password, String realName, Integer role, String verificationCode) {
         if (!StringUtils.hasText(email) || !StringUtils.hasText(password)) {
-            return Result.fail("邮箱或密码不能为空");
+            throw new IllegalArgumentException("邮箱或密码不能为空");
         }
         if (!StringUtils.hasText(verificationCode)) {
-            return Result.fail("验证码不能为空");
+            throw new IllegalArgumentException("验证码不能为空");
         }
         if (!verificationCodeService.validate(email, verificationCode)) {
-            return Result.info(400, "验证码错误或已过期");
+            throw new IllegalArgumentException("验证码错误或已过期");
         }
 
         // 邮箱唯一性校验
@@ -72,7 +71,7 @@ public class EmployeeServiceImpl implements EmployeeService {
                         .eq(User::getIsDeleted, 0)
         );
         if (exists != null && exists > 0) {
-            return Result.info(409, "该邮箱已注册");
+            throw new IllegalArgumentException("该邮箱已注册");
         }
         User user = new User();
         user.setEmail(email);
@@ -85,10 +84,11 @@ public class EmployeeServiceImpl implements EmployeeService {
             user.setRealName(email);
             System.out.println("realName 为空，使用 email 作为默认值: " + email);
         }
-        user.setRole(role == null ? 1 : role);
+        // 注册时强制设置为用户（role=1），不允许通过注册接口创建管理员
+        user.setRole(1);
         int rows = userMapper.insert(user);
         if (rows == 0) {
-            return Result.fail("注册失败，请稍后再试");
+            throw new RuntimeException("注册失败，请稍后再试");
         }
         
         // 返回注册结果VO
@@ -97,13 +97,13 @@ public class EmployeeServiceImpl implements EmployeeService {
         responseVO.setEmail(user.getEmail());
         responseVO.setRealName(user.getRealName());
         responseVO.setRole(user.getRole());
-        return Result.ok(responseVO);
+        return responseVO;
     }
 
     @Override
-    public Result sendRegisterCode(String email) {
+    public SendCodeResponseVO sendRegisterCode(String email) {
         if (!StringUtils.hasText(email)) {
-            return Result.fail("邮箱不能为空");
+            throw new IllegalArgumentException("邮箱不能为空");
         }
         // 已存在则提示
         Long exists = userMapper.selectCount(
@@ -112,7 +112,7 @@ public class EmployeeServiceImpl implements EmployeeService {
                         .eq(User::getIsDeleted, 0)
         );
         if (exists != null && exists > 0) {
-            return Result.info(409, "该邮箱已注册");
+            throw new IllegalArgumentException("该邮箱已注册");
         }
         String code = verificationCodeService.generate(email);
         mailService.sendSimpleMail(mailServiceFrom(), email, "考试系统注册验证码", "您的验证码为：" + code + "，5分钟内有效。");
@@ -120,32 +120,31 @@ public class EmployeeServiceImpl implements EmployeeService {
         // 返回发送验证码结果VO
         SendCodeResponseVO responseVO = new SendCodeResponseVO();
         responseVO.setMessage("验证码已发送到您的邮箱，请查收");
-        return Result.ok(responseVO);
+        return responseVO;
     }
 
     @Override
-    public Result logout(String token) {
+    public void logout(String token) {
         // 系统未持久化会话状态，客户端丢弃 token 即可；这里尝试解析以便给出更友好的反馈
         if (StringUtils.hasText(token)) {
             try {
                 JwtUtils.parseJWT(token);
             } catch (Exception ex) {
-                return Result.info(401, "token无效或已过期");
+                throw new IllegalArgumentException("token无效或已过期");
             }
         }
-        return Result.info(200, "退出成功");
     }
 
     @Override
-    public Result editPassword(Long empId, String oldPassword, String newPassword) {
+    public void editPassword(Long empId, String oldPassword, String newPassword) {
         if (empId == null) {
-            return Result.fail("用户ID不能为空");
+            throw new IllegalArgumentException("用户ID不能为空");
         }
         if (!StringUtils.hasText(oldPassword) || !StringUtils.hasText(newPassword)) {
-            return Result.fail("旧密码和新密码均不能为空");
+            throw new IllegalArgumentException("旧密码和新密码均不能为空");
         }
         if (oldPassword.equals(newPassword)) {
-            return Result.info(400, "新密码不能与旧密码相同");
+            throw new IllegalArgumentException("新密码不能与旧密码相同");
         }
 
         int rows = userMapper.update(
@@ -157,9 +156,8 @@ public class EmployeeServiceImpl implements EmployeeService {
                         .set(User::getPassword, newPassword)
         );
         if (rows == 0) {
-            return Result.info(400, "旧密码错误或用户不存在");
+            throw new IllegalArgumentException("旧密码错误或用户不存在");
         }
-        return Result.info(200, "密码修改成功");
     }
 
     /**

@@ -6,17 +6,26 @@ import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
 import org.example.examsystem.dto.StudentReviewCount;
 import org.example.examsystem.entity.AnswerRecord;
+import org.example.examsystem.entity.Exam;
 import org.example.examsystem.entity.ExamQuestion;
 import org.example.examsystem.entity.TesterExam;
 import org.example.examsystem.mapper.AnswerRecordMapper;
+import org.example.examsystem.mapper.ExamMapper;
 import org.example.examsystem.mapper.ExamQuestionMapper;
+import org.example.examsystem.mapper.QuestionAnswerMapper;
+import org.example.examsystem.mapper.QuestionMapper;
 import org.example.examsystem.mapper.TesterExamMapper;
 import org.example.examsystem.service.IService.IExamPaperService;
+import org.example.examsystem.vo.ExamPaperDetailVO;
+import org.example.examsystem.vo.PaperQuestionDetailVO;
 import org.example.examsystem.vo.ProgressVO;
 import org.example.examsystem.vo.QuestionDetailVO;
+import org.example.examsystem.vo.QuestionSimpleInfoVO;
 import org.example.examsystem.vo.TeacherReviewQuestionDetailVO;
 import org.springframework.stereotype.Service;
+import java.util.stream.Collectors;
 
+import java.util.ArrayList;
 import java.util.List;
 
 @Service
@@ -26,6 +35,9 @@ public class ExamPaperServiceImpl extends ServiceImpl<AnswerRecordMapper, Answer
     private final AnswerRecordMapper answerRecordMapper;
     private final ExamQuestionMapper examQuestionMapper;
     private final TesterExamMapper  testerExamMapper;
+    private final ExamMapper examMapper;
+    private final QuestionMapper questionMapper;
+    private final QuestionAnswerMapper questionAnswerMapper;
 
     /**
      * 考生查看作答详细
@@ -52,7 +64,8 @@ public class ExamPaperServiceImpl extends ServiceImpl<AnswerRecordMapper, Answer
                 .list()
                 .stream()
                 .map(ExamQuestion::getQuestionId)
-                .toList();
+                .collect(Collectors.toList());
+
     }
 
     /**
@@ -123,5 +136,53 @@ public class ExamPaperServiceImpl extends ServiceImpl<AnswerRecordMapper, Answer
                 .count();
 
         return new ProgressVO(reviewedStudents, totalStudents);
+    }
+
+    @Override
+    public ExamPaperDetailVO getPaperDetailForCreator(Long examId, Long creatorId) {
+        if (examId == null) {
+            throw new IllegalArgumentException("考试ID不能为空");
+        }
+        if (creatorId == null) {
+            throw new IllegalArgumentException("创建者ID不能为空");
+        }
+
+        Exam exam = examMapper.selectById(examId);
+        if (exam == null || (exam.getIsDeleted() != null && exam.getIsDeleted() == 1)) {
+            throw new IllegalArgumentException("考试不存在");
+        }
+        if (exam.getCreatorId() == null || !exam.getCreatorId().equals(creatorId)) {
+            throw new IllegalArgumentException("无权限查看该试卷");
+        }
+
+        List<QuestionSimpleInfoVO> questions = questionMapper.getQuestions(examId);
+        List<PaperQuestionDetailVO> detailList = new ArrayList<>();
+        if (questions != null) {
+            for (QuestionSimpleInfoVO q : questions) {
+                PaperQuestionDetailVO item = new PaperQuestionDetailVO();
+                item.setQuestion(q);
+                if (q != null && q.getQuestionId() != null) {
+                    var qa = questionAnswerMapper.selectByQuestionId(q.getQuestionId());
+                    if (qa != null) {
+                        item.setCorrectAnswer(qa.getCorrectAnswer());
+                        item.setAnswerAnalysis(qa.getAnswerAnalysis());
+                    }
+                }
+                detailList.add(item);
+            }
+        }
+
+        ExamPaperDetailVO vo = new ExamPaperDetailVO();
+        vo.setExamId(exam.getId());
+        vo.setExamName(exam.getExamName());
+        vo.setExamCode(exam.getExamCode());
+        vo.setDescription(exam.getDescription());
+        vo.setStartTime(exam.getStartTime());
+        vo.setEndTime(exam.getEndTime());
+        vo.setLimitMinutes(exam.getLimitMinutes());
+        vo.setStatus(exam.getStatus());
+        vo.setShowAnswers(exam.getPaperShow());
+        vo.setQuestions(detailList);
+        return vo;
     }
 }

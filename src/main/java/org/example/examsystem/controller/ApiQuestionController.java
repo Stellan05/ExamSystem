@@ -84,25 +84,27 @@ public class ApiQuestionController {
 
         log.info("创建题目请求: examId={}, score={}", request.getExamId(), request.getScore());
 
-        Result result = questionService.createQuestion(request);
-
-        // 创建成功后，如果有 examId，则写入 exam_question
-        if (result.getCode() == 200 && request.getExamId() != null) {
-            try {
-                Long questionId = (Long) result.getData();
-                Integer score = request.getScore() != null ? request.getScore() : 0;
-                log.info("开始关联题目与考试: questionId={}, examId={}, score={}", questionId, request.getExamId(), score);
-                questionService.associateQuestionWithExam(questionId, request.getExamId(), score);
-                log.info("题目与考试关联成功: questionId={}, examId={}", questionId, request.getExamId());
-            } catch (Exception e) {
-                log.error("关联题目与考试失败: questionId={}, examId={}, error={}",
-                        result.getData(), request.getExamId(), e.getMessage(), e);
+        try {
+            Long questionId = questionService.createQuestion(request);
+            
+            // 创建成功后，如果有 examId，则写入 exam_question
+            if (request.getExamId() != null) {
+                try {
+                    Integer score = request.getScore() != null ? request.getScore() : 0;
+                    log.info("开始关联题目与考试: questionId={}, examId={}, score={}", questionId, request.getExamId(), score);
+                    questionService.associateQuestionWithExam(questionId, request.getExamId(), score);
+                    log.info("题目与考试关联成功: questionId={}, examId={}", questionId, request.getExamId());
+                } catch (Exception e) {
+                    log.error("关联题目与考试失败: questionId={}, examId={}, error={}",
+                            questionId, request.getExamId(), e.getMessage(), e);
+                }
             }
-        } else {
-            log.info("跳过关联: result.getCode()={}, examId={}", result.getCode(), request.getExamId());
+            
+            // Controller层统一包装成Result
+            return Result.ok(questionId);
+        } catch (IllegalArgumentException e) {
+            return Result.fail(e.getMessage());
         }
-
-        return result;
     }
 
     /**
@@ -122,7 +124,17 @@ public class ApiQuestionController {
         } catch (Exception e) {
             return Result.info(401, "token无效或已过期");
         }
-        return questionService.setQuestionAnswer(questionId, request);
+        try {
+            questionService.setQuestionAnswer(questionId, request);
+            // Controller层统一包装成Result
+            return Result.ok("设置成功");
+        } catch (IllegalArgumentException e) {
+            String message = e.getMessage();
+            if (message.contains("不存在")) {
+                return Result.info(404, message);
+            }
+            return Result.fail(message);
+        }
     }
 
     /**

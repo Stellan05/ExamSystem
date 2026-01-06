@@ -2,6 +2,8 @@ package org.example.examsystem.dto;
 
 import lombok.Data;
 
+import java.util.List;
+
 /**
  * 创建试卷/考试请求
  */
@@ -33,4 +35,8 @@ public class CreateExamRequest {
      * 考试结束后是否展示答案
      */
     private Boolean showAnswers;
+    /**
+     * 题目列表（可选，如果提供则一次性创建整张试卷）
+     */
+    private List<QuestionInExamDTO> questions;
 }

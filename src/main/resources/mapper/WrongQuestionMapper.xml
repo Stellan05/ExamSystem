@@ -19,11 +19,27 @@
             -- 原题目字段
             q.question_type AS questionType,
             q.content AS content,
-            q.options_json AS optionsJson
+            CASE 
+                WHEN GROUP_CONCAT(qo.option_key ORDER BY qo.option_key SEPARATOR '') IS NOT NULL
+                THEN CONCAT('[',
+                    GROUP_CONCAT(
+                        CONCAT('{"option":"', qo.option_key, '","text":"', 
+                            REPLACE(REPLACE(REPLACE(REPLACE(qo.option_text, '\\', '\\\\'), '"', '\\"'), '\n', '\\n'), '\r', '\\r'), 
+                            '"}')
+                        ORDER BY qo.option_key
+                        SEPARATOR ','
+                    ),
+                    ']')
+                ELSE NULL
+            END AS optionsJson
 
         FROM wrong_question wt
         LEFT JOIN question q ON wt.question_id = q.id
+        LEFT JOIN question_option qo ON q.id = qo.question_id
         WHERE q.question_type = #{type}
+        GROUP BY wt.id, wt.student_id, wt.question_id, wt.wrong_count, 
+                 wt.student_answer, wt.correct_answer, wt.note, 
+                 wt.create_time, wt.update_time, q.question_type, q.content
     </select>
 
 </mapper>

@@ -2,24 +2,24 @@ package org.example.examsystem.service.IService;
 
 import org.example.examsystem.dto.CreateQuestionRequest;
 import org.example.examsystem.dto.SetQuestionAnswerRequest;
-import org.example.examsystem.vo.Result;
 
 public interface IQuestionService {
 
     /**
      * 创建题目（带选项）
+     * @return 题目ID
      */
-    Result createQuestion(CreateQuestionRequest request);
+    Long createQuestion(CreateQuestionRequest request);
 
     /**
      * 设置题目的标准答案与解析
      */
-    Result setQuestionAnswer(Long questionId, SetQuestionAnswerRequest request);
+    void setQuestionAnswer(Long questionId, SetQuestionAnswerRequest request);
 
     /**
      * 删除题目
      */
-    Result deleteQuestion(Long questionId);
+    void deleteQuestion(Long questionId);
 
     /**
      * 绑定题目到考试（写 exam_question）
@@ -36,4 +36,3 @@ public interface IQuestionService {
      */
     void removeQuestionFromExam(Long examId, Long questionId);
 }
-

@@ -5,7 +5,6 @@ import com.baomidou.mybatisplus.annotation.*;
 import lombok.Data;
 
 import java.time.LocalDateTime;
-import java.util.Date;
 
 @Data
 @TableName("user")
@@ -20,7 +19,7 @@ public class User {
 
     private String realName;
 
-    // 用户类型 1 参与者  2 出题人
+    // 用户类型 0 管理员  1 用户（默认）
     private Integer role;
 
     @TableField(fill = FieldFill.INSERT)

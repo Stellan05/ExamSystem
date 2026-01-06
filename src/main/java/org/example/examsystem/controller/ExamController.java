@@ -2,25 +2,23 @@ package org.example.examsystem.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.example.examsystem.entity.Exam;
-import org.example.examsystem.entity.TesterExam;
 import org.example.examsystem.mapper.AnswerRecordMapper;
 import org.example.examsystem.mapper.ExamMapper;
-import org.example.examsystem.mapper.TesterExamMapper;
 import org.example.examsystem.service.IService.IExamService;
 import org.example.examsystem.service.IService.IGradeService;
 import org.example.examsystem.vo.*;
 import org.springframework.beans.BeanUtils;
-import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.bind.annotation.*;
 
-import java.time.LocalDateTime;
 import java.util.List;
 
 /**
  * 考试相关模块controller
  */
+@Slf4j
 @RestController
 @RequestMapping("/exam")
 @RequiredArgsConstructor
@@ -30,7 +28,6 @@ public class ExamController {
     private final ExamMapper examMapper;
     private final AnswerRecordMapper answerRecordMapper;
     private final IGradeService gradeService;
-    private final TesterExamMapper testerExamMapper;
 
     /**
      * 分页查询参加本场考试人员信息
@@ -113,35 +110,6 @@ public class ExamController {
         BeanUtils.copyProperties(exam,examSimpleInfoVO);
         examSimpleInfoVO.setExamId(exam.getId());
         return Result.ok(examSimpleInfoVO);
-    }
-
-    /**
-     * 点击确认后开始考试
-     * @param examId 考试ID
-     * @param userId 用户ID
-     * @return 题目链表
-     */
-    @Transactional
-    @PostMapping("/{examId}/start")
-    public Result startExam(
-            @PathVariable("examId") Long examId,
-            @RequestParam("userId")  Long userId
-    ){
-        // 加入考试后创建考试信息关联表
-        TesterExam testerExam = new TesterExam();
-        testerExam.setExamId(examId);
-        testerExam.setStudentId(userId);
-        testerExam.setStartTime(LocalDateTime.now());
-        testerExam.setStatus(1);
-
-        int result = testerExamMapper.insert(testerExam);
-        if(result==0){
-            return Result.fail("开始考试异常，请联系管理员");
-        }
-        // 获取考试题目信息
-        List<QuestionSimpleInfoVO> questions = examService.getQuestions(examId);
-
-        return Result.ok(questions);
     }
 
     /**

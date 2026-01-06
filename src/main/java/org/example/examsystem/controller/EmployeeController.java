@@ -35,7 +35,12 @@ public class EmployeeController {
         if (!StringUtils.hasText(request.getUsername()) || !StringUtils.hasText(request.getPassword())) {
             return Result.fail("用户名或密码不能为空");
         }
-        return authService.login(request.getUsername(), request.getPassword());
+        try {
+            // Controller层统一包装成Result
+            return Result.ok(authService.login(request.getUsername(), request.getPassword()));
+        } catch (IllegalArgumentException e) {
+            return Result.info(401, e.getMessage());
+        }
     }
 
     /**
@@ -69,7 +74,21 @@ public class EmployeeController {
         }
         
         log.info("开始处理注册请求: email={}", request.getEmail());
-        return authService.register(request.getEmail(), request.getPassword(), request.getRealName(), request.getRole(), request.getVerificationCode());
+        try {
+            // Controller层统一包装成Result
+            return Result.ok(authService.register(request.getEmail(), request.getPassword(), request.getRealName(), request.getRole(), request.getVerificationCode()));
+        } catch (IllegalArgumentException e) {
+            // 根据异常消息判断错误类型
+            String message = e.getMessage();
+            if (message.contains("验证码")) {
+                return Result.info(400, message);
+            } else if (message.contains("已注册")) {
+                return Result.info(409, message);
+            }
+            return Result.fail(message);
+        } catch (RuntimeException e) {
+            return Result.fail(e.getMessage());
+        }
     }
 
     /**
@@ -85,7 +104,16 @@ public class EmployeeController {
         }
         
         log.info("开始发送验证码: email={}", request.getEmail());
-        return authService.sendRegisterCode(request.getEmail());
+        try {
+            // Controller层统一包装成Result
+            return Result.ok(authService.sendRegisterCode(request.getEmail()));
+        } catch (IllegalArgumentException e) {
+            String message = e.getMessage();
+            if (message.contains("已注册")) {
+                return Result.info(409, message);
+            }
+            return Result.fail(message);
+        }
     }
 
     /**
@@ -97,7 +125,13 @@ public class EmployeeController {
         if (StringUtils.hasText(authorization) && authorization.startsWith("Bearer ")) {
             token = authorization.substring(7);
         }
-        return authService.logout(token);
+        try {
+            authService.logout(token);
+            // Controller层统一包装成Result
+            return Result.ok("退出成功");
+        } catch (IllegalArgumentException e) {
+            return Result.info(401, e.getMessage());
+        }
     }
 
     /**
@@ -111,7 +145,17 @@ public class EmployeeController {
         if (!StringUtils.hasText(request.getOldPassword()) || !StringUtils.hasText(request.getNewPassword())) {
             return Result.fail("旧密码和新密码均不能为空");
         }
-        return authService.editPassword(request.getEmpId(), request.getOldPassword(), request.getNewPassword());
+        try {
+            authService.editPassword(request.getEmpId(), request.getOldPassword(), request.getNewPassword());
+            // Controller层统一包装成Result
+            return Result.ok("密码修改成功");
+        } catch (IllegalArgumentException e) {
+            String message = e.getMessage();
+            if (message.contains("不能与旧密码相同") || message.contains("旧密码错误")) {
+                return Result.info(400, message);
+            }
+            return Result.fail(message);
+        }
     }
 }
 

@@ -1,0 +1,664 @@
+openapi: 3.0.0
+info:
+  title: 管理员操作日志接口文档
+  description: 管理员操作日志管理相关接口，支持查询、搜索、导出、删除等功能。所有接口都需要管理员权限（role=0）。
+  version: 1.0.0
+servers:
+  - url: http://localhost:8080
+    description: 本地开发环境
+  - url: https://api.example.com
+    description: 生产环境
+
+tags:
+  - name: 操作日志管理
+    description: 管理员操作日志相关接口
+
+paths:
+  /admin/operation-logs:
+    get:
+      tags:
+        - 操作日志管理
+      summary: 获取操作日志列表
+      description: 根据筛选条件获取操作日志列表，支持多条件组合查询。返回完整的Result格式，包含code、message和data字段。
+      operationId: getOperationLogs
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Bearer Token，格式：Bearer {token}，需要管理员权限（role=0）
+          schema:
+            type: string
+            example: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        - name: userId
+          in: query
+          required: false
+          description: 用户ID
+          schema:
+            type: integer
+            format: int64
+            example: 1
+        - name: module
+          in: query
+          required: false
+          description: 操作模块（支持模糊查询）
+          schema:
+            type: string
+            example: 操作日志管理
+        - name: operationType
+          in: query
+          required: false
+          description: 操作类型
+          schema:
+            type: string
+            example: 查询
+        - name: status
+          in: query
+          required: false
+          description: 操作状态（0-失败，1-成功）
+          schema:
+            type: integer
+            enum: [0, 1]
+            example: 1
+        - name: startTime
+          in: query
+          required: false
+          description: 开始时间（格式：yyyy-MM-dd HH:mm:ss）
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$'
+            example: "2024-12-01 00:00:00"
+        - name: endTime
+          in: query
+          required: false
+          description: 结束时间（格式：yyyy-MM-dd HH:mm:ss）
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$'
+            example: "2024-12-31 23:59:59"
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultList'
+              example:
+                code: 200
+                message: "success"
+                data:
+                  - id: 1
+                    userId: 1
+                    username: "admin"
+                    module: "操作日志管理"
+                    operationType: "查询"
+                    description: "查询操作日志列表"
+                    requestMethod: "GET"
+                    requestUrl: "/admin/operation-logs"
+                    requestParams: "{\"userId\":null,\"module\":null}"
+                    responseResult: "{\"code\":200,\"message\":\"success\"}"
+                    ipAddress: "192.168.1.100"
+                    status: 1
+                    errorMessage: null
+                    duration: 120
+                    createTime: "2024-12-25T10:30:00"
+                    updateTime: "2024-12-25T10:30:00"
+        '500':
+          description: 请求失败（权限不足、token无效等）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResult'
+              examples:
+                unauthorized:
+                  summary: 未授权
+                  value:
+                    code: 500
+                    message: "未登录或缺少授权信息"
+                    data: null
+                forbidden:
+                  summary: 权限不足
+                  value:
+                    code: 500
+                    message: "权限不足，仅管理员可访问"
+                    data: null
+                invalidToken:
+                  summary: Token无效
+                  value:
+                    code: 500
+                    message: "token无效或已过期"
+                    data: null
+
+  /admin/operation-logs/{id}:
+    get:
+      tags:
+        - 操作日志管理
+      summary: 获取操作日志详情
+      description: 根据ID获取操作日志的详细信息。返回完整的Result格式。
+      operationId: getOperationLogDetail
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Bearer Token，需要管理员权限（role=0）
+          schema:
+            type: string
+            example: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        - name: id
+          in: path
+          required: true
+          description: 操作日志ID
+          schema:
+            type: integer
+            format: int64
+            example: 1
+      responses:
+        '200':
+          description: 查询成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultObject'
+              example:
+                code: 200
+                message: "success"
+                data:
+                  id: 1
+                  userId: 1
+                  username: "admin"
+                  module: "操作日志管理"
+                  operationType: "查询"
+                  description: "查询操作日志详情（ID=1）"
+                  requestMethod: "GET"
+                  requestUrl: "/admin/operation-logs/1"
+                  requestParams: null
+                  responseResult: "{\"code\":200,\"message\":\"success\"}"
+                  ipAddress: "192.168.1.100"
+                  status: 1
+                  errorMessage: null
+                  duration: 45
+                  createTime: "2024-12-25T12:00:00"
+                  updateTime: "2024-12-25T12:00:00"
+        '404':
+          description: 操作日志不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResult'
+              example:
+                code: 404
+                message: "操作日志不存在"
+                data: null
+        '500':
+          description: 请求失败（权限不足、token无效等）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResult'
+
+    delete:
+      tags:
+        - 操作日志管理
+      summary: 删除操作日志
+      description: 根据ID删除指定的操作日志（逻辑删除）。返回完整的Result格式。
+      operationId: deleteOperationLog
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Bearer Token，需要管理员权限（role=0）
+          schema:
+            type: string
+            example: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        - name: id
+          in: path
+          required: true
+          description: 操作日志ID
+          schema:
+            type: integer
+            format: int64
+            example: 1
+      responses:
+        '200':
+          description: 删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultMessage'
+              example:
+                code: 200
+                message: "success"
+                data: "删除成功"
+        '404':
+          description: 操作日志不存在
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResult'
+              example:
+                code: 404
+                message: "操作日志不存在"
+                data: null
+        '500':
+          description: 请求失败（权限不足、token无效、参数错误等）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResult'
+              examples:
+                invalidId:
+                  summary: 参数错误
+                  value:
+                    code: 500
+                    message: "操作日志ID不能为空"
+                    data: null
+                unauthorized:
+                  summary: 未授权
+                  value:
+                    code: 500
+                    message: "权限不足，仅管理员可访问"
+                    data: null
+
+  /admin/operation-logs/search:
+    get:
+      tags:
+        - 操作日志管理
+      summary: 搜索操作日志
+      description: 根据关键词搜索操作日志，支持多字段模糊匹配。返回完整的Result格式。
+      operationId: searchOperationLogs
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Bearer Token，需要管理员权限（role=0）
+          schema:
+            type: string
+            example: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        - name: keyword
+          in: query
+          required: false
+          description: 关键词（搜索用户名、操作描述、模块）
+          schema:
+            type: string
+            example: Java
+        - name: startDate
+          in: query
+          required: false
+          description: 开始日期（格式：yyyy-MM-dd）
+          schema:
+            type: string
+            format: date
+            example: "2024-12-01"
+        - name: endDate
+          in: query
+          required: false
+          description: 结束日期（格式：yyyy-MM-dd）
+          schema:
+            type: string
+            format: date
+            example: "2024-12-31"
+        - name: module
+          in: query
+          required: false
+          description: 操作模块（支持模糊查询）
+          schema:
+            type: string
+            example: 操作日志管理
+        - name: operationType
+          in: query
+          required: false
+          description: 操作类型
+          schema:
+            type: string
+            example: 查询
+      responses:
+        '200':
+          description: 搜索成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultList'
+              example:
+                code: 200
+                message: "success"
+                data:
+                  - id: 1
+                    userId: 1
+                    username: "admin"
+                    module: "操作日志管理"
+                    operationType: "搜索"
+                    description: "搜索操作日志（关键词：Java）"
+                    requestMethod: "GET"
+                    requestUrl: "/admin/operation-logs/search"
+                    requestParams: "{\"keyword\":\"Java\"}"
+                    responseResult: "{\"code\":200}"
+                    ipAddress: "192.168.1.101"
+                    status: 1
+                    errorMessage: null
+                    duration: 180
+                    createTime: "2024-12-25T13:00:00"
+                    updateTime: "2024-12-25T13:00:00"
+        '500':
+          description: 请求失败（权限不足、token无效等）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResult'
+
+  /admin/operation-logs/export:
+    get:
+      tags:
+        - 操作日志管理
+      summary: 导出操作日志
+      description: 根据筛选条件导出操作日志为CSV文件。成功时返回CSV文件流，失败时返回Result格式的错误信息。
+      operationId: exportOperationLogs
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Bearer Token，需要管理员权限（role=0）
+          schema:
+            type: string
+            example: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+        - name: userId
+          in: query
+          required: false
+          description: 用户ID
+          schema:
+            type: integer
+            format: int64
+            example: 1
+        - name: module
+          in: query
+          required: false
+          description: 操作模块
+          schema:
+            type: string
+            example: 操作日志管理
+        - name: operationType
+          in: query
+          required: false
+          description: 操作类型
+          schema:
+            type: string
+            example: 查询
+        - name: status
+          in: query
+          required: false
+          description: 操作状态（0-失败，1-成功）
+          schema:
+            type: integer
+            enum: [0, 1]
+            example: 1
+        - name: startTime
+          in: query
+          required: false
+          description: 开始时间（格式：yyyy-MM-dd HH:mm:ss）
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$'
+            example: "2024-12-01 00:00:00"
+        - name: endTime
+          in: query
+          required: false
+          description: 结束时间（格式：yyyy-MM-dd HH:mm:ss）
+          schema:
+            type: string
+            pattern: '^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$'
+            example: "2024-12-31 23:59:59"
+      responses:
+        '200':
+          description: 导出成功，返回CSV文件
+          headers:
+            Content-Disposition:
+              schema:
+                type: string
+                example: attachment;filename=operation_logs_20241225120000.csv
+            Content-Type:
+              schema:
+                type: string
+                example: text/csv;charset=UTF-8
+          content:
+            text/csv:
+              schema:
+                type: string
+                format: binary
+              example: |
+                ID,用户名,模块,操作类型,操作描述,请求方法,请求URL,IP地址,状态,操作时间
+                1,admin,操作日志管理,查询,查询操作日志列表,GET,/admin/operation-logs,192.168.1.100,成功,2024-12-25 10:30:00
+        '500':
+          description: 导出失败（权限不足、token无效等）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResult'
+              example:
+                code: 500
+                message: "导出操作日志失败"
+                data: null
+
+  /admin/operation-logs/batch-delete:
+    post:
+      tags:
+        - 操作日志管理
+      summary: 批量删除操作日志
+      description: 批量删除多个操作日志（逻辑删除）。返回完整的Result格式。
+      operationId: batchDeleteOperationLogs
+      parameters:
+        - name: Authorization
+          in: header
+          required: true
+          description: Bearer Token，需要管理员权限（role=0）
+          schema:
+            type: string
+            example: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9...
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BatchDeleteRequest'
+            example:
+              ids: [1, 2, 3, 4, 5]
+      responses:
+        '200':
+          description: 批量删除成功
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ResultMessage'
+              example:
+                code: 200
+                message: "success"
+                data: "批量删除成功"
+        '500':
+          description: 批量删除失败（权限不足、token无效、参数错误等）
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ErrorResult'
+              examples:
+                emptyIds:
+                  summary: 参数错误
+                  value:
+                    code: 500
+                    message: "请选择要删除的操作日志"
+                    data: null
+                unauthorized:
+                  summary: 未授权
+                  value:
+                    code: 500
+                    message: "权限不足，仅管理员可访问"
+                    data: null
+
+components:
+  schemas:
+    OperationLog:
+      type: object
+      description: 操作日志实体
+      properties:
+        id:
+          type: integer
+          format: int64
+          description: 日志ID
+          example: 1
+        userId:
+          type: integer
+          format: int64
+          description: 操作用户ID
+          example: 1
+        username:
+          type: string
+          description: 操作用户名
+          example: "admin"
+        module:
+          type: string
+          description: 操作模块
+          example: "操作日志管理"
+        operationType:
+          type: string
+          description: 操作类型
+          example: "查询"
+        description:
+          type: string
+          description: 操作描述
+          example: "查询操作日志列表"
+        requestMethod:
+          type: string
+          description: 请求方法
+          example: "GET"
+        requestUrl:
+          type: string
+          description: 请求URL
+          example: "/admin/operation-logs"
+        requestParams:
+          type: string
+          nullable: true
+          description: 请求参数（JSON字符串）
+          example: "{\"userId\":null,\"module\":null}"
+        responseResult:
+          type: string
+          nullable: true
+          description: 响应结果（JSON字符串）
+          example: "{\"code\":200,\"message\":\"success\"}"
+        ipAddress:
+          type: string
+          nullable: true
+          description: IP地址
+          example: "192.168.1.100"
+        status:
+          type: integer
+          description: 操作状态（0-失败，1-成功）
+          enum: [0, 1]
+          example: 1
+        errorMessage:
+          type: string
+          nullable: true
+          description: 错误信息
+          example: null
+        duration:
+          type: integer
+          format: int64
+          nullable: true
+          description: 操作耗时（毫秒）
+          example: 120
+        createTime:
+          type: string
+          format: date-time
+          description: 创建时间（ISO 8601格式）
+          example: "2024-12-25T10:30:00"
+        updateTime:
+          type: string
+          format: date-time
+          description: 更新时间（ISO 8601格式）
+          example: "2024-12-25T10:30:00"
+
+    BatchDeleteRequest:
+      type: object
+      description: 批量删除请求
+      required:
+        - ids
+      properties:
+        ids:
+          type: array
+          description: 要删除的操作日志ID列表
+          items:
+            type: integer
+            format: int64
+          minItems: 1
+          example: [1, 2, 3, 4, 5]
+
+    ResultList:
+      type: object
+      description: 列表查询结果（统一返回格式）
+      properties:
+        code:
+          type: integer
+          description: 状态码（200表示成功）
+          example: 200
+        message:
+          type: string
+          description: 提示信息
+          example: "success"
+        data:
+          type: array
+          description: 操作日志列表
+          items:
+            $ref: '#/components/schemas/OperationLog'
+
+    ResultObject:
+      type: object
+      description: 单个对象查询结果（统一返回格式）
+      properties:
+        code:
+          type: integer
+          description: 状态码（200表示成功）
+          example: 200
+        message:
+          type: string
+          description: 提示信息
+          example: "success"
+        data:
+          $ref: '#/components/schemas/OperationLog'
+
+    ResultMessage:
+      type: object
+      description: 操作结果（统一返回格式）
+      properties:
+        code:
+          type: integer
+          description: 状态码（200表示成功）
+          example: 200
+        message:
+          type: string
+          description: 提示信息
+          example: "success"
+        data:
+          type: string
+          nullable: true
+          description: 操作结果消息
+          example: "删除成功"
+
+    ErrorResult:
+      type: object
+      description: 错误结果（统一返回格式）
+      properties:
+        code:
+          type: integer
+          description: 状态码（非200表示失败）
+          example: 500
+        message:
+          type: string
+          description: 错误信息
+          example: "操作失败"
+        data:
+          type: object
+          nullable: true
+          description: 数据（通常为null）
+          example: null
+
+  securitySchemes:
+    BearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      description: JWT Token认证，格式：Bearer {token}，需要管理员权限（role=0）

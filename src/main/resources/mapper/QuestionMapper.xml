@@ -8,9 +8,11 @@
             q.id AS questionId,
             q.content AS content,
             q.question_type AS type,
-            eq.score AS score
+            eq.score AS score,
+            qa.answer_analysis AS answerAnalysis
         FROM exam_question eq
                  JOIN question q ON eq.question_id = q.id
+                 LEFT JOIN question_answer qa ON qa.question_id = q.id
         WHERE eq.exam_id = #{examId}
           AND eq.is_deleted = 0
           AND q.is_deleted = 0
@@ -22,6 +24,7 @@
         <result property="content" column="content"/>
         <result property="type" column="type"/>
         <result property="score" column="score"/>
+        <result property="answerAnalysis" column="answerAnalysis"/>
         <collection property="options" ofType="org.example.examsystem.vo.OptionVO"
                     select="getOptionsByQuestionIdForChoice" column="questionId"/>
     </resultMap>
