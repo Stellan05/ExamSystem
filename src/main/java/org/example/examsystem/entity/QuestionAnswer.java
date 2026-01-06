@@ -28,10 +28,7 @@ public class QuestionAnswer {
     @TableField("answer_analysis")
     private String answerAnalysis;
 
-    /**
-     * 本题解析
-     */
-    private String answerAnalysis;
+
 
     @TableField(fill = FieldFill.INSERT)
     private LocalDateTime createTime;

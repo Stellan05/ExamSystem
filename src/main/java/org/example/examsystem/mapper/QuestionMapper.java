@@ -16,8 +16,6 @@ public interface QuestionMapper extends BaseMapper<Question> {
     void associateQuestionWithExam(@Param("questionId") Long questionId,
                                    @Param("examId") Long examId,
                                    @Param("score") Integer score);
-
-
         List<QuestionAnswerDTO> selectQuestionsWithAnswer(@Param("examId") Long examId);
 }
 

@@ -55,7 +55,6 @@ public class ExamPaperServiceImpl extends ServiceImpl<AnswerRecordMapper, Answer
     private final QuestionMapper questionMapper;
     private final StringRedisTemplate redisTemplate;
     private final ExamMapper examMapper;
-    private final QuestionMapper questionMapper;
     private final QuestionAnswerMapper questionAnswerMapper;
 
     /**

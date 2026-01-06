@@ -282,15 +282,16 @@ public class ExamServiceImpl extends ServiceImpl<ExamMapper,Exam> implements IEx
                     qa.setAnswerAnalysis(questionDTO.getAnswerAnalysis());
                     questionAnswerMapper.insert(qa);
                 }
-
-                // 关联题目到试卷
+// 在创建ExamQuestion对象后添加分数设置
                 ExamQuestion examQuestion = new ExamQuestion();
                 examQuestion.setExamId(examId);
                 examQuestion.setQuestionId(questionId);
-                examQuestion.setScore(questionDTO.getScore());
+// 将Integer分数转换为Double
+                examQuestion.setScore(questionDTO.getScore().doubleValue());
                 examQuestion.setSort(sort++);
                 examQuestion.setIsDeleted(0);
                 examQuestionMapper.insert(examQuestion);
+
             }
         }
 

@@ -147,7 +147,7 @@ public class QuestionServiceImpl implements IQuestionService {
 
         ExamQuestion existing = examQuestionMapper.selectByExamIdAndQuestionId(examId, questionId);
         if (existing != null && (existing.getIsDeleted() == null || existing.getIsDeleted() == 0)) {
-            existing.setScore(score);
+            existing.setScore(score.doubleValue());
             examQuestionMapper.updateById(existing);
             return;
         }
@@ -155,7 +155,7 @@ public class QuestionServiceImpl implements IQuestionService {
         ExamQuestion examQuestion = new ExamQuestion();
         examQuestion.setExamId(examId);
         examQuestion.setQuestionId(questionId);
-        examQuestion.setScore(score);
+        examQuestion.setScore(score.doubleValue());
         examQuestion.setIsDeleted(0);
         int insertResult = examQuestionMapper.insert(examQuestion);
         if (insertResult <= 0) {
@@ -177,7 +177,7 @@ public class QuestionServiceImpl implements IQuestionService {
         if (existing == null || (existing.getIsDeleted() != null && existing.getIsDeleted() == 1)) {
             throw new RuntimeException("题目未关联到该考试，请先关联题目到考试");
         }
-        existing.setScore(score);
+        existing.setScore(score.doubleValue());
         examQuestionMapper.updateById(existing);
     }
 
