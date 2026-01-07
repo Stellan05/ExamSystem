@@ -4,8 +4,14 @@ import com.baomidou.mybatisplus.core.metadata.IPage;
 import com.baomidou.mybatisplus.extension.plugins.pagination.Page;
 import com.baomidou.mybatisplus.extension.service.impl.ServiceImpl;
 import lombok.RequiredArgsConstructor;
+import org.example.examsystem.entity.Question;
+import org.example.examsystem.entity.QuestionAnswer;
+import org.example.examsystem.mapper.QuestionAnswerMapper;
+import org.example.examsystem.mapper.QuestionMapper;
 import org.example.examsystem.mapper.WrongQuestionMapper;
 import org.example.examsystem.service.IService.IWrongQuestionService;
+import org.example.examsystem.vo.QuestionAnswerVO;
+import org.example.examsystem.vo.RandomWrongQuestionVO;
 import org.example.examsystem.vo.WrongQuestionVO;
 import org.springframework.stereotype.Service;
 
@@ -16,6 +22,8 @@ import java.util.List;
 public class WrongQuestionServiceImp extends ServiceImpl<WrongQuestionMapper, WrongQuestionVO> implements IWrongQuestionService {
 
     private final WrongQuestionMapper wrongQuestionMapper;
+    private final QuestionAnswerMapper questionAnswerMapper;
+    private final QuestionMapper questionMapper;
 
     /**
      * 按照错题时间查询错题列表
@@ -46,4 +54,32 @@ public class WrongQuestionServiceImp extends ServiceImpl<WrongQuestionMapper, Wr
         Page<WrongQuestionVO> voPage = new Page<>(page,pageSize);
         return wrongQuestionMapper.getWrongQuestionsByType(voPage,questionType);
     }
-}
+
+    @Override
+    public RandomWrongQuestionVO getRandomWrongQuestion(Long studentId, List<Long> excludeQuestionIds) {
+        return wrongQuestionMapper.getRandomWrongQuestion(studentId, excludeQuestionIds);
+    }
+
+    @Override
+    public QuestionAnswerVO getQuestionAnswer(Long questionId) {
+        // 先检查题目是否存在
+        Question question = questionMapper.selectById(questionId);
+        if (question == null || (question.getIsDeleted() != null && question.getIsDeleted() == 1)) {
+            return null;
+        }
+
+        // 查询答案
+        QuestionAnswer questionAnswer = questionAnswerMapper.selectByQuestionId(questionId);
+        if (questionAnswer == null) {
+            return null;
+        }
+
+        // 转换为VO
+        QuestionAnswerVO vo = new QuestionAnswerVO();
+        vo.setQuestionId(questionId);
+        vo.setCorrectAnswer(questionAnswer.getCorrectAnswer());
+        vo.setAnalysis(questionAnswer.getAnswerAnalysis());
+        return vo;
+    }
+    }
+

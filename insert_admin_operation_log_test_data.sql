@@ -82,3 +82,7 @@ INSERT INTO `operation_log` (`user_id`, `username`, `module`, `operation_type`, 
 VALUES (1, 'admin', '操作日志管理', '查询', '查询操作日志详情（ID=20，完整数据）', 'GET', '/admin/operation-logs/20', NULL, '{"code":200,"message":"success","data":{"id":20,"userId":1,"username":"admin","module":"操作日志管理","operationType":"查询","description":"查询操作日志详情","requestMethod":"GET","requestUrl":"/admin/operation-logs/20","requestParams":null,"responseResult":"{\\"code\\":200}","ipAddress":"192.168.1.111","status":1,"errorMessage":null,"duration":50,"createTime":"2024-12-25T20:00:00","updateTime":"2024-12-25T20:00:00"}}', '192.168.1.112', 1, NULL, 50, '2024-12-25 20:30:00', '2024-12-25 20:30:00', 0);
 
 
+
+
+
+

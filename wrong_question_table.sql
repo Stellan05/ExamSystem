@@ -19,3 +19,7 @@ CREATE TABLE IF NOT EXISTS `wrong_question` (
 ) ENGINE=InnoDB DEFAULT CHARSET=utf8mb4 COMMENT='错题表';
 
 
+
+
+
+

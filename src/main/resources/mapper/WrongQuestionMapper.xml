@@ -42,4 +42,38 @@
                  wt.create_time, wt.update_time, q.question_type, q.content
     </select>
 
+    <!-- 查询学生的随机错题（不含答案） -->
+    <select id="getRandomWrongQuestion" resultMap="randomWrongQuestionResultMap">
+        SELECT
+        q.id AS questionId,
+        q.content AS content,
+        q.question_type AS questionType
+        FROM answer_record ar
+        JOIN tester_exam te ON ar.student_exam_id = te.id
+        JOIN exam_question eq ON eq.exam_id = te.exam_id AND eq.question_id = ar.question_id
+        JOIN question q ON q.id = ar.question_id
+        WHERE te.student_id = #{studentId}
+        AND ar.is_deleted = 0
+        AND te.is_deleted = 0
+        AND eq.is_deleted = 0
+        AND q.is_deleted = 0
+        AND ar.final_score &lt; eq.score
+        <if test="excludeQuestionIds != null and excludeQuestionIds.size() > 0">
+            AND q.id NOT IN
+            <foreach collection="excludeQuestionIds" item="id" open="(" separator="," close=")">
+                #{id}
+            </foreach>
+        </if>
+        GROUP BY q.id, q.content, q.question_type
+        ORDER BY RAND()
+        LIMIT 1
+    </select>
+
+    <resultMap id="randomWrongQuestionResultMap" type="org.example.examsystem.vo.RandomWrongQuestionVO">
+        <id property="questionId" column="questionId"/>
+        <result property="content" column="content"/>
+        <result property="questionType" column="questionType"/>
+        <collection property="options" ofType="org.example.examsystem.vo.OptionVO"
+                    select="getOptionsByQuestionIdForChoice" column="questionId"/>
+    </resultMap>
 </mapper>
