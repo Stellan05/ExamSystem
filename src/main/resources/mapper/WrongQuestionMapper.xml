@@ -76,4 +76,11 @@
         <collection property="options" ofType="org.example.examsystem.vo.OptionVO"
                     select="getOptionsByQuestionIdForChoice" column="questionId"/>
     </resultMap>
+    <select id="getOptionsByQuestionIdForChoice" resultType="org.example.examsystem.vo.OptionVO" parameterType="long">
+        SELECT
+        option_key AS optionKey,
+        option_text AS optionText
+        FROM question_option
+        WHERE question_id = #{questionId}
+    </select>
 </mapper>

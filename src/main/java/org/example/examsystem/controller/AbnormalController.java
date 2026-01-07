@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 @RequestMapping("/abnormal")
 @RequiredArgsConstructor
+
 public class AbnormalController {
     private final AbnormalBehaviorMapper abnormalBehaviorMapper;
 

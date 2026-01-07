@@ -84,10 +84,14 @@ public class WrongQuestionController {
         QuestionAnswerVO questionAnswer = wrongQuestionService.getQuestionAnswer(wrongQuestion.getQuestionId());
         //封装结果
         WrongQuestionWithAnswerVO result = new WrongQuestionWithAnswerVO();
-        result.setQuestion(wrongQuestion);
-        result.setAnswer(questionAnswer);
+        result.setQuestionId(wrongQuestion.getQuestionId());
+        result.setContent(wrongQuestion.getContent());
+        result.setQuestionType(wrongQuestion.getQuestionType());
+        result.setOptions(wrongQuestion.getOptions());
+        result.setCorrectAnswer(questionAnswer.getCorrectAnswer());
+        result.setAnalysis(questionAnswer.getAnalysis());
 
-        return Result.ok(wrongQuestion);
+        return Result.ok(result);
 
     }
 

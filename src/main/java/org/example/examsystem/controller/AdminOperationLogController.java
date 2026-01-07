@@ -3,6 +3,7 @@ package org.example.examsystem.controller;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.examsystem.anno.Log;
 import org.example.examsystem.dto.BatchDeleteRequest;
 import org.example.examsystem.dto.OperationLogQueryParams;
 import org.example.examsystem.dto.OperationLogSearchParams;
@@ -123,6 +124,7 @@ public class AdminOperationLogController {
     /**
      * 删除操作日志
      */
+    @Log(module = "操作日志管理", operationType = "删除", description = "删除操作日志")
     @DeleteMapping("/operation-logs/{id}")
     public Result deleteOperationLog(@RequestHeader(value = "Authorization", required = false) String authorization,
                                      @PathVariable Long id) {
@@ -144,6 +146,7 @@ public class AdminOperationLogController {
     /**
      * 批量删除操作日志
      */
+    @Log(module = "操作日志管理", operationType = "批量删除", description = "批量删除操作日志")
     @PostMapping("/operation-logs/batch-delete")
     public Result batchDeleteOperationLogs(@RequestHeader(value = "Authorization", required = false) String authorization,
                                            @RequestBody BatchDeleteRequest request) {

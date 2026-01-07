@@ -3,6 +3,7 @@ package org.example.examsystem.controller;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.examsystem.anno.Log;
 import org.example.examsystem.dto.CreateQuestionRequest;
 import org.example.examsystem.dto.SetQuestionAnswerRequest;
 import org.example.examsystem.dto.UpdateQuestionScoreRequest;
@@ -32,6 +33,7 @@ public class ApiQuestionController {
      * - creatorId 从 token 获取
      * - examId：优先使用请求体传参，其次 X-Current-Exam-Id 请求头，否则自动取最近创建的考试
      */
+    @Log(module = "题目管理", operationType = "创建", description = "创建新题目")
     @PostMapping("/questions")
     public Result createQuestion(@RequestHeader(value = "Authorization", required = false) String authorization,
                                  @RequestHeader(value = "X-Current-Exam-Id", required = false) Long currentExamId,
@@ -110,6 +112,7 @@ public class ApiQuestionController {
     /**
      * 设置题目的标准答案与解析
      */
+    @Log(module = "题目管理", operationType = "设置答案", description = "设置题目答案和解析")
     @PostMapping("/questions/{questionId}/answer")
     public Result setQuestionAnswer(@RequestHeader(value = "Authorization", required = false) String authorization,
                                     @PathVariable Long questionId,
@@ -138,10 +141,11 @@ public class ApiQuestionController {
     }
 
     /**
-     * 删除题目（本系统无“题库”概念：题目属于某场考试）
+     * 删除题目（本系统无"题库"概念：题目属于某场考试）
      * - 实际行为：从指定考试中移除题目（逻辑删除 exam_question 关联）
      * - examId 获取方式：优先 query 参数 examId，其次请求头 X-Current-Exam-Id
      */
+    @Log(module = "题目管理", operationType = "删除", description = "从考试中删除题目")
     @PostMapping("/questions/{questionId}/delete")
     public Result deleteQuestion(@RequestHeader(value = "Authorization", required = false) String authorization,
                                  @RequestHeader(value = "X-Current-Exam-Id", required = false) Long currentExamId,

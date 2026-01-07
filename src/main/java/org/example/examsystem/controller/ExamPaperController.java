@@ -2,6 +2,7 @@ package org.example.examsystem.controller;
 
 import com.baomidou.mybatisplus.core.conditions.query.LambdaQueryWrapper;
 import lombok.RequiredArgsConstructor;
+import org.example.examsystem.anno.Log;
 import org.example.examsystem.dto.JudgeRequest;
 import org.example.examsystem.dto.QuestionScoreDTO;
 import org.example.examsystem.entity.TesterExam;
@@ -64,6 +65,7 @@ public class ExamPaperController {
      * @param judgeRequest 评卷DTO
      * @return 评卷成功
      */
+    @Log(module = "试卷管理", operationType = "评卷", description = "批阅试卷")
     @PostMapping("/{examId}/judge")
     public Result judgeQuestionAnswer(@PathVariable("examId") Long examId,
                                       @RequestBody JudgeRequest judgeRequest){

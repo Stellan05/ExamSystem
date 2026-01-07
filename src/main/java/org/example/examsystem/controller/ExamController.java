@@ -5,6 +5,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import lombok.val;
 import org.apache.ibatis.annotations.Param;
+import org.example.examsystem.anno.Log;
 import org.example.examsystem.dto.AbnormalBehaviorDTO;
 import org.example.examsystem.dto.AnswerDTO;
 import org.example.examsystem.dto.ExamSubmitDTO;
@@ -173,6 +174,7 @@ public class ExamController {
      * @param userId 用户ID
      * @return 题目链表
      */
+    @Log(module = "考试管理", operationType = "开始考试", description = "考生开始考试")
     @Transactional
     @GetMapping("/{examId}/start")
     public Result  startExam(
@@ -271,6 +273,7 @@ public class ExamController {
      * @param examId 考试ID
      * @param userId 用户ID
      */
+    @Log(module = "考试管理", operationType = "提交异常", description = "提交考试异常行为记录")
     @PostMapping("/{examId}/submit/abnormal")
     public Result submitAbnormal(@PathVariable("examId") Long examId,
                                  @RequestParam("userId") Long userId,
@@ -284,6 +287,7 @@ public class ExamController {
 
      * @param dto 交卷DTO
      */
+    @Log(module = "考试管理", operationType = "交卷", description = "考生提交试卷")
     @PostMapping("/submit/paper")
     public Result submitPaper( @RequestBody ExamSubmitDTO dto){
         // 先调用存Redis接口
@@ -299,6 +303,7 @@ public class ExamController {
      * @param userId 用户ID
      * @return 结果
      */
+    @Log(module = "考试管理", operationType = "暂存答案", description = "暂存考试答案")
     @PostMapping("/auto-save")
     public Result autoSaveExam(@RequestBody ExamSubmitDTO dto,
                                @RequestParam(value = "userId",required = false) Long userId) {

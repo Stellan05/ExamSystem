@@ -2,6 +2,7 @@ package org.example.examsystem.controller;
 
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.examsystem.anno.Log;
 import org.example.examsystem.dto.LoginRequest;
 import org.example.examsystem.dto.RegisterRequest;
 import org.example.examsystem.dto.SendCodeRequest;
@@ -30,6 +31,7 @@ public class EmployeeController {
     /**
      * 登录接口
      */
+    @Log(module = "用户管理", operationType = "登录", description = "用户登录")
     @PostMapping("/login")
     public Result login(@RequestBody LoginRequest request) {
         if (!StringUtils.hasText(request.getUsername()) || !StringUtils.hasText(request.getPassword())) {
@@ -46,6 +48,7 @@ public class EmployeeController {
     /**
      * 注册接口（邮箱注册）
      */
+    @Log(module = "用户管理", operationType = "注册", description = "用户注册")
     @PostMapping("/register")
     public Result register(@RequestBody RegisterRequest request) {
         log.info("收到注册请求: email={}, password={}, realName=[{}], role={}, verificationCode={}", 
@@ -94,6 +97,7 @@ public class EmployeeController {
     /**
      * 发送注册验证码到邮箱
      */
+    @Log(module = "用户管理", operationType = "发送验证码", description = "发送注册验证码")
     @PostMapping("/register/code")
     public Result sendRegisterCode(@RequestBody SendCodeRequest request) {
         log.info("收到发送验证码请求: email={}", request.getEmail());
@@ -119,6 +123,7 @@ public class EmployeeController {
     /**
      * 退出登录接口
      */
+    @Log(module = "用户管理", operationType = "退出登录", description = "用户退出登录")
     @PostMapping("/logout")
     public Result logout(@RequestHeader(value = "Authorization", required = false) String authorization) {
         String token = null;
@@ -137,6 +142,7 @@ public class EmployeeController {
     /**
      * 修改密码接口
      */
+    @Log(module = "用户管理", operationType = "修改密码", description = "用户修改密码")
     @PutMapping("/editPassword")
     public Result editPassword(@RequestBody EditPasswordRequest request) {
         if (request.getEmpId() == null) {

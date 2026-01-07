@@ -3,6 +3,7 @@ package org.example.examsystem.controller;
 import io.jsonwebtoken.Claims;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.example.examsystem.anno.Log;
 import org.example.examsystem.dto.CreateExamRequest;
 import org.example.examsystem.dto.UpdateExamBasicInfoRequest;
 import org.example.examsystem.service.IService.IExamPaperService;
@@ -33,6 +34,7 @@ public class ApiExamController {
      * 创建考试/试卷
      * - creatorId 从 token 中获取，前端无需传递（即使传递也会被覆盖）
      */
+    @Log(module = "考试管理", operationType = "创建", description = "创建新考试")
     @PostMapping("/exams")
     public Result createExam(@RequestHeader(value = "Authorization", required = false) String authorization,
                              @RequestBody CreateExamRequest request) {
@@ -113,6 +115,7 @@ public class ApiExamController {
     /**
      * 修改试卷基本信息（仅创建者可修改，默认仅未开始 status=0 允许修改）
      */
+    @Log(module = "考试管理", operationType = "修改", description = "修改考试基本信息")
     @PostMapping("/exams/{examId}/update")
     public Result updateExamBasicInfo(@RequestHeader(value = "Authorization", required = false) String authorization,
                                       @PathVariable Long examId,
@@ -153,6 +156,7 @@ public class ApiExamController {
      * - 检查所有题目是否有标准答案（主观题可选）
      * - 检查所有题目是否有分数
      */
+    @Log(module = "考试管理", operationType = "完成编辑", description = "完成试卷编辑")
     @PostMapping("/exams/{examId}/complete")
     public Result completeExamEdit(@RequestHeader(value = "Authorization", required = false) String authorization,
                                     @PathVariable Long examId) {
