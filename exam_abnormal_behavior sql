@@ -1,0 +1,11 @@
+CREATE TABLE `exam_abnormal_behavior` (
+    `id` bigint NOT NULL AUTO_INCREMENT COMMENT '主键',
+    `exam_id` bigint NOT NULL COMMENT '考试ID',
+    `user_id` bigint NOT NULL COMMENT '考生ID',
+    `behavior_type` varchar(50) NOT NULL COMMENT '异常行为类型，如 SWITCH_TAB / COPY / FORCE_SUBMIT',
+    `occur_time` timestamp NOT NULL DEFAULT CURRENT_TIMESTAMP COMMENT '异常发生时间',
+    `remark` varchar(255) DEFAULT NULL COMMENT '补充说明，如触发规则、前端上报信息',
+    PRIMARY KEY (`id`),
+    KEY `idx_exam_user` (`exam_id`, `user_id`),
+    KEY `idx_behavior_time` (`behavior_type`, `occur_time`)
+) ENGINE = InnoDB AUTO_INCREMENT = 7 DEFAULT CHARSET = utf8mb4 COLLATE = utf8mb4_0900_ai_ci COMMENT = '考试异常行为记录表'
